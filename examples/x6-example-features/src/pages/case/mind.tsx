@@ -1,5 +1,5 @@
 import React from 'react'
-import { Graph, Cell, Node } from '@antv/x6'
+import { Graph, Node } from '@antv/x6'
 import { connectors } from '../connector/xmind-definitions'
 import Hierarchy from '@antv/hierarchy'
 import { Selection } from '@antv/x6-plugin-selection'
@@ -184,13 +184,9 @@ export default class Example extends React.Component {
         connectionPoint: 'anchor',
       },
     })
-    const selection = new Selection({
-      enabled: true,
-    })
+    const selection = new Selection()
     graph.use(selection)
-    const keyboard = new Keyboard({
-      enabled: true,
-    })
+    const keyboard = new Keyboard()
     graph.use(keyboard)
 
     const render = () => {
@@ -212,12 +208,15 @@ export default class Example extends React.Component {
           return 'right'
         },
       })
-      const cells: Cell[] = []
       const traverse = (hierarchyItem: HierarchyResult) => {
         if (hierarchyItem) {
           const { data, children } = hierarchyItem
-          cells.push(
-            graph.createNode({
+          // 检查当前遍历的节点已经存在还是需要新添加？
+          if (graph.hasCell(data.id)) {
+            const node = graph.getCellById(data.id)
+            node.prop('position', { x: hierarchyItem.x, y: hierarchyItem.y })
+          } else {
+            graph.addNode({
               id: data.id,
               shape: data.type === 'topic-child' ? 'topic-child' : 'topic',
               x: hierarchyItem.x,
@@ -226,13 +225,18 @@ export default class Example extends React.Component {
               height: data.height,
               label: data.label,
               type: data.type,
-            }),
-          )
+            })
+          }
           if (children) {
             children.forEach((item: HierarchyResult) => {
               const { id, data } = item
-              cells.push(
-                graph.createEdge({
+              // 先遍历子节点（里面包含创建逻辑，如果画布没有开启async的时候，创建边会提示找不到target节点）
+              traverse(item)
+              const eid = `${hierarchyItem.id}-->${id}`
+              // 检查当前边是否已经存在
+              if (!graph.hasCell(eid)) {
+                graph.addEdge({
+                  id: eid,
                   shape: 'mindmap-edge',
                   source: {
                     cell: hierarchyItem.id,
@@ -257,15 +261,13 @@ export default class Example extends React.Component {
                       name: 'left',
                     },
                   },
-                }),
-              )
-              traverse(item)
+                })
+              }
             })
           }
         }
       }
       traverse(result)
-      graph.resetCells(cells)
       graph.centerContent()
     }
 
@@ -303,9 +305,14 @@ export default class Example extends React.Component {
       if (dataItem) {
         let item: MindMapData | null = null
         const length = dataItem.children ? dataItem.children.length : 0
+        let nid = `${id}-${length + 1}`
+        if (graph.hasCell(nid)) {
+          // 如果通过length + 1拼接出来的节点id在画布中存在了，就在id后面加上随机数
+          nid = nid + Math.random()
+        }
         if (type === 'topic') {
           item = {
-            id: `${id}-${length + 1}`,
+            id: nid,
             type: 'topic-branch',
             label: `分支主题${length + 1}`,
             width: 100,
@@ -313,7 +320,7 @@ export default class Example extends React.Component {
           }
         } else if (type === 'topic-branch') {
           item = {
-            id: `${id}-${length + 1}`,
+            id: nid,
             type: 'topic-child',
             label: `子主题${length + 1}`,
             width: 60,
@@ -334,10 +341,16 @@ export default class Example extends React.Component {
 
     const removeNode = (id: string) => {
       const res = findItem(data, id)
-      const dataItem = res?.parent
-      if (dataItem && dataItem.children) {
-        const { children } = dataItem
+      const parentItem = res?.parent
+      const nodeItem = res?.node
+      if (parentItem && parentItem.children) {
+        const { children } = parentItem
         const index = children.findIndex((item) => item.id === id)
+        // 删除的时候，先删节点以及可能存在的子节点，再调用render，对data数据进行遍历
+        if (nodeItem && nodeItem.children) {
+          nodeItem.children.forEach((item) => graph.removeCell(item.id))
+        }
+        graph.removeCell(id)
         return children.splice(index, 1)
       }
       return null

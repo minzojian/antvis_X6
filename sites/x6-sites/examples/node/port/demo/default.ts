@@ -22,7 +22,7 @@ const rect = graph.addNode({
   ports: [
     // 默认样式
     { id: 'port1' },
-    // 自定义链接桩样式
+    // 自定义连接桩样式
     {
       id: 'port2',
       attrs: {

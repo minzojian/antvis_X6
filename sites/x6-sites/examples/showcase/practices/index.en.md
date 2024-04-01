@@ -1,7 +1,6 @@
 ---
 title: Practices
-order: 10
+order: 1
 redirect_from:
   - /zh/examples/practices
 ---
-

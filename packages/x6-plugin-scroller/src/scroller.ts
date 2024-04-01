@@ -865,8 +865,8 @@ export class ScrollerImpl extends View<ScrollerImpl.EventArgs> {
 
   protected removeTransition() {
     Dom.removeClass(this.container, ScrollerImpl.transitionClassName)
-    Dom.Event.off(this.container, ScrollerImpl.transitionEventName)
-    Dom.css(this.container, {
+    Dom.Event.off(this.content, ScrollerImpl.transitionEventName)
+    Dom.css(this.content, {
       transform: '',
       transformOrigin: '',
       transition: '',
@@ -1128,7 +1128,8 @@ export namespace ScrollerImpl {
     panning: { e: Dom.MouseMoveEvent }
     'pan:stop': { e: Dom.MouseUpEvent }
   }
-  export interface CommonOptions {
+  export interface Options {
+    graph: Graph
     enabled?: boolean
     className?: string
     width?: number
@@ -1150,10 +1151,6 @@ export namespace ScrollerImpl {
           this: ScrollerImpl,
           scroller: ScrollerImpl,
         ) => TransformManager.FitToContentFullOptions)
-  }
-
-  export interface Options extends CommonOptions {
-    graph: Graph
   }
   export interface CenterOptions {
     padding?: NumberExt.SideOptions
@@ -1266,7 +1263,7 @@ export namespace ScrollerImpl {
       result.background == null
     ) {
       result.background = graphOptions.background
-      delete graphOptions.background
+      options.graph.background.clear()
     }
 
     return result as ScrollerImpl.Options

@@ -100,7 +100,7 @@ const graph = new Graph({
   },
 })
 
-fetch('../data/bpmn.json')
+fetch('/data/bpmn.json')
   .then((response) => response.json())
   .then((data) => {
     const cells: Cell[] = []

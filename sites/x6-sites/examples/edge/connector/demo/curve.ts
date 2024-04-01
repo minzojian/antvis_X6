@@ -1,4 +1,5 @@
 import { Graph, Path } from '@antv/x6'
+import { Transform } from '@antv/x6-plugin-transform'
 
 const degreesToRadians = (degrees) => degrees * (Math.PI / 180)
 const transCanvasAngleToRos = (angle) => angle - 90
@@ -42,14 +43,18 @@ const calcIntersectionPoint = (points) => {
 const graph = new Graph({
   container: document.getElementById('container'),
   grid: true,
-  rotating: {
-    enabled: true,
-  },
   connecting: {
     anchor: 'nodeCenter',
     connectionPoint: 'anchor',
   },
 })
+graph.use(
+  new Transform({
+    rotating: {
+      enabled: true,
+    },
+  }),
+)
 
 Graph.registerConnector(
   'curve',

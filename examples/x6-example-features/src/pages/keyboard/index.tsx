@@ -2,10 +2,12 @@ import React from 'react'
 import { Graph } from '@antv/x6'
 import { Keyboard } from '@antv/x6-plugin-keyboard'
 import { Selection } from '@antv/x6-plugin-selection'
+import { Button } from 'antd'
 import '../index.less'
 
 export default class Example extends React.Component {
   private container: HTMLDivElement
+  private graph: Graph
 
   componentDidMount() {
     const graph = new Graph({
@@ -15,8 +17,8 @@ export default class Example extends React.Component {
       grid: true,
     })
 
-    const selection = new Selection({ enabled: true })
-    const keyboard = new Keyboard({ enabled: true })
+    const selection = new Selection()
+    const keyboard = new Keyboard()
     graph.use(selection)
     graph.use(keyboard)
 
@@ -47,16 +49,28 @@ export default class Example extends React.Component {
     keyboard.bindKey('backspace', () => {
       graph.removeCells(selection.getSelectedCells())
     })
+
+    this.graph = graph
   }
 
   refContainer = (container: HTMLDivElement) => {
     this.container = container
   }
 
+  enablePlugins = () => {
+    this.graph.enablePlugins('keyboard')
+  }
+
+  disablePlugins = () => {
+    this.graph.disablePlugins('keyboard')
+  }
+
   render() {
     return (
       <div className="x6-graph-wrap">
         <div ref={this.refContainer} className="x6-graph" />
+        <Button onClick={this.enablePlugins}>enable</Button>
+        <Button onClick={this.disablePlugins}>disable</Button>
       </div>
     )
   }

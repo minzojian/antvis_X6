@@ -12,20 +12,20 @@ import {
 } from '@antv/x6'
 import './api'
 
-export class Export extends Basecoat<Export.EventArgs> {
-  private graph: Graph
+export class Export extends Basecoat<Export.EventArgs> implements Graph.Plugin {
   public name = 'export'
+  private graph: Graph
 
   constructor() {
     super()
   }
 
-  init(graph: Graph) {
-    this.graph = graph
-  }
-
   get view() {
     return this.graph.view
+  }
+
+  init(graph: Graph) {
+    this.graph = graph
   }
 
   exportPNG(fileName = 'chart', options: Export.ToImageOptions = {}) {
@@ -48,6 +48,16 @@ export class Export extends Basecoat<Export.EventArgs> {
 
   toSVG(callback: Export.ToSVGCallback, options: Export.ToSVGOptions = {}) {
     this.notify('before:export', options)
+
+    // to keep pace with it's doc description witch, the default value should be true.
+    // without Object.hasOwn method cause by ts config target.
+    // without instance.hasOwnProperty method cause by ts rule.
+    // the condition will be false if these properties have been set undefined in the target,
+    // but will be true if these properties are not in the target, cause the doc.
+    !Object.prototype.hasOwnProperty.call(options, 'copyStyle') &&
+      (options.copyStyles = true)
+    !Object.prototype.hasOwnProperty.call(options, 'serializeImages') &&
+      (options.serializeImages = true)
 
     const rawSVG = this.view.svg
     const vSVG = Vector.create(rawSVG).clone()
@@ -94,7 +104,7 @@ export class Export extends Basecoat<Export.EventArgs> {
     //    custom stylesheets onto the `style` attribute of each of the nodes
     //    in SVG.
 
-    if (options.copyStyles !== false) {
+    if (options.copyStyles) {
       const document = rawSVG.ownerDocument!
       const raws = Array.from(rawSVG.querySelectorAll('*'))
       const clones = Array.from(clonedSVG.querySelectorAll('*'))
@@ -327,6 +337,11 @@ export class Export extends Basecoat<Export.EventArgs> {
   ) {
     this.trigger(name, args)
     this.graph.trigger(name, args)
+  }
+
+  @Basecoat.dispose()
+  dispose(): void {
+    this.off()
   }
 }
 

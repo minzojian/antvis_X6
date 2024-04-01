@@ -12,9 +12,12 @@ import {
   Graph,
   EventArgs,
 } from '@antv/x6'
+import { alignPoint } from 'dom-align'
 import { content } from './style/raw'
 
-export class Dnd extends View {
+export class Dnd extends View implements Graph.Plugin {
+  public name = 'dnd'
+
   protected sourceNode: Node | null
   protected draggingNode: Node | null
   protected draggingView: NodeView | null
@@ -24,11 +27,9 @@ export class Dnd extends View {
   protected delta: Point | null
   protected padding: number | null
   protected snapOffset: Point.PointLike | null
-  protected originOffset: null | { left: number; top: number }
 
-  public name = 'dnd'
-  public readonly options: Dnd.Options
-  public readonly draggingGraph: Graph
+  public options: Dnd.Options
+  public draggingGraph: Graph
 
   protected get targetScroller() {
     const target = this.options.target
@@ -52,13 +53,15 @@ export class Dnd extends View {
 
   constructor(options: Partial<Dnd.Options> & { target: Graph }) {
     super()
-
-    CssLoader.ensure(this.name, content)
-
     this.options = {
       ...Dnd.defaults,
       ...options,
     } as Dnd.Options
+    this.init()
+  }
+
+  init() {
+    CssLoader.ensure(this.name, content)
 
     this.container = document.createElement('div')
     Dom.addClass(this.container, this.prefixClassName('widget-dnd'))
@@ -81,7 +84,10 @@ export class Dnd extends View {
 
     this.targetModel.startBatch('dnd')
     Dom.addClass(this.container, 'dragging')
-    Dom.appendTo(this.container, this.options.containerParent || document.body)
+    Dom.appendTo(
+      this.container,
+      this.options.draggingContainer || document.body,
+    )
 
     this.sourceNode = node
     this.prepareDragging(node, e.clientX, e.clientY)
@@ -149,6 +155,7 @@ export class Dnd extends View {
     draggingGraph.fitToContent({
       padding,
       allowNewOrigin: 'any',
+      useCellGeometry: false,
     })
 
     const bbox = delegateView.getBBox()
@@ -158,28 +165,30 @@ export class Dnd extends View {
     this.draggingView = delegateView
     this.draggingBBox = draggingNode.getBBox()
     this.padding = padding
-    this.originOffset = this.updateGraphPosition(clientX, clientY)
+    this.updateGraphPosition(clientX, clientY)
   }
 
   protected updateGraphPosition(clientX: number, clientY: number) {
-    const scrollTop =
-      document.body.scrollTop || document.documentElement.scrollTop
     const delta = this.delta!
     const nodeBBox = this.geometryBBox
     const padding = this.padding || 5
     const offset = {
       left: clientX - delta.x - nodeBBox.width / 2 - padding,
-      top: clientY - delta.y - nodeBBox.height / 2 - padding + scrollTop,
+      top: clientY - delta.y - nodeBBox.height / 2 - padding,
     }
 
     if (this.draggingGraph) {
-      Dom.css(this.container, {
-        left: `${offset.left}px`,
-        top: `${offset.top}px`,
-      })
+      alignPoint(
+        this.container,
+        {
+          clientX: offset.left,
+          clientY: offset.top,
+        },
+        {
+          points: ['tl'],
+        },
+      )
     }
-
-    return offset
   }
 
   protected updateNodePosition(x: number, y: number) {
@@ -316,7 +325,6 @@ export class Dnd extends View {
       this.delta = null
       this.padding = null
       this.snapOffset = null
-      this.originOffset = null
       this.undelegateDocumentEvents()
     }
   }
@@ -481,7 +489,7 @@ export namespace Dnd {
     //       duration?: number
     //       easing?: string
     //     }
-    containerParent?: HTMLElement
+    draggingContainer?: HTMLElement
     /**
      * dnd tool box container.
      */

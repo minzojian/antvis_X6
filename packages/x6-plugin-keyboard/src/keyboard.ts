@@ -21,7 +21,6 @@ export class KeyboardImpl extends Disposable implements IDisablable {
     private readonly options: KeyboardImpl.Options & { graph: Graph },
   ) {
     super()
-
     const scroller = this.graph.getPlugin('scroller') as any
     this.container = scroller ? scroller.container : this.graph.container
 
@@ -76,6 +75,14 @@ export class KeyboardImpl extends Disposable implements IDisablable {
     this.mousetrap.unbind(this.getKeys(keys), action)
   }
 
+  clear() {
+    this.mousetrap.reset()
+  }
+
+  trigger(key: string, action?: KeyboardImpl.Action) {
+    this.mousetrap.trigger(key, action)
+  }
+
   private focus(e: EventArgs['node:mouseup']) {
     const isInputEvent = this.isInputEvent(e.e)
     if (isInputEvent) {
@@ -95,10 +102,14 @@ export class KeyboardImpl extends Disposable implements IDisablable {
 
   protected formatkey(key: string) {
     const formated = key
-      .toLowerCase()
+      .toLocaleLowerCase()
       .replace(/\s/g, '')
       .replace('delete', 'del')
       .replace('cmd', 'command')
+      .replace('arrowup', 'up')
+      .replace('arrowright', 'right')
+      .replace('arrowdown', 'down')
+      .replace('arrowleft', 'left')
 
     const formatFn = this.options.format
     if (formatFn) {

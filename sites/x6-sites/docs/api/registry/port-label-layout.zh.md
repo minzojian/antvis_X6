@@ -1,35 +1,35 @@
 ---
-title: PortLabelLayout
-order: 6
+title: 连接桩标签布局
+order: 12
 redirect_from:
   - /zh/docs
   - /zh/docs/api
   - /zh/docs/api/registry
 ---
 
-链接桩标签布局算法是一个具有如下签名的函数，返回标签相对于链接桩的位置和旋转角度。
+连接桩标签布局算法是一个具有如下签名的函数，返回标签相对于连接桩的位置和旋转角度。
 
-```sign
+```ts
 type Definition<T> = (
-  portPosition: Point,  // 链接桩的位置
-  elemBBox: Rectangle,  // 节点的包围盒
-  args: T,              // 标签位置参数
+  portPosition: Point, // 连接桩的位置
+  elemBBox: Rectangle, // 节点的包围盒
+  args: T, // 标签位置参数
 ) => Result
 
 interface Result {
   position: Point.PointLike // 标签相对于位置
-  angle: number             // 标签的旋转角度
-  attrs: Attr.CellAttrs     // 标签的属性
+  angle: number // 标签的旋转角度
+  attrs: Attr.CellAttrs // 标签的属性
 }
 ```
 
-创建链接桩时，可以在群组 `groups` 中指定该组的标签定位，也可以在 `items` 中覆盖群组中的定义：
+创建连接桩时，可以在群组 `groups` 中指定该组的标签定位，也可以在 `items` 中覆盖群组中的定义：
 
 ```ts
 graph.addNode(
   ...,
   ports: {
-    // 链接桩分组
+    // 连接桩分组
     groups: {
       group1: {
         label: {
@@ -41,16 +41,16 @@ graph.addNode(
       },
     },
 
-    // 链接桩定义
+    // 连接桩定义
     items: [
       {
         groups: 'group1',
-        label: { 
+        label: {
           position: { // 覆盖 group1 中指定的标签定位算法
             name: 'xxx',
             args: { ... },
           }
-        }, 
+        },
       }
     ],
   },
@@ -59,19 +59,16 @@ graph.addNode(
 
 下面我们一起来看看如何使用内置的标签布局算法，以及如何自定并注册自定义布局算法。
 
+## 内置连接桩标签布局
 
-## presets
+### Side
 
-在 `Registry.PortLabelLayout.presets` 命令空间中提供了以下几个布局算法。
+标签位于连接桩的某一侧。
 
-### *Side*
-
-标签位于链接桩的某一侧。
-
-- `'left'` 标签位于链接桩左侧。
-- `'right'` 标签位于链接桩右侧。
-- `'top'` 标签位于链接桩顶部。
-- `'bottom'` 标签位于链接桩底部。
+- `'left'` 标签位于连接桩左侧。
+- `'right'` 标签位于连接桩右侧。
+- `'top'` 标签位于连接桩顶部。
+- `'bottom'` 标签位于连接桩底部。
 
 可以通过 `args` 来指定标签的位置和旋转角度。
 
@@ -84,8 +81,6 @@ interface SideArgs {
 }
 ```
 
-<span class="tag-param">参数<span>
-
 | 名称  | 类型           | 必选 | 默认值 | 描述                                      |
 |-------|----------------|:----:|--------|-----------------------------------------|
 | x     | number         |      | -      | 用指定的 X 坐标替换计算结果中的 X 坐标。   |
@@ -93,7 +88,6 @@ interface SideArgs {
 | angle | number         |      | -      | 用指定的旋转角度替换计算结果中的旋转角度。 |
 | attrs | Attr.CellAttrs |      | -      | 标签属性。                                 |
 
-<span class="tag-example">用法</span>
 
 ```ts
 label: {
@@ -111,9 +105,9 @@ label: {
 }
 ```
 
-<iframe src="/demos/api/registry/port-label-layout/side"></iframe>
+<code id="port-label-layout-side" src="@/src/api/port-label-layout/side/index.tsx"></code>
 
-### *Inside/Outside*
+### Inside/Outside
 
 标签位于节点的内部或者外部，支持一下四种布局：
 
@@ -134,8 +128,6 @@ interface InOutArgs {
 }
 ```
 
-<span class="tag-param">参数<span>
-
 | 名称   | 类型           | 必选 | 默认值 | 描述                                      |
 |--------|----------------|:----:|--------|-----------------------------------------|
 | offset | number         |      | `15`   | 从节点中心到标签位置的方向上的偏移量。     |
@@ -144,7 +136,6 @@ interface InOutArgs {
 | angle  | number         |      | -      | 用指定的旋转角度替换计算结果中的旋转角度。 |
 | attrs  | Attr.CellAttrs |      | -      | 标签属性。                                 |
 
-<span class="tag-example">用法</span>
 
 ```ts
 label: {
@@ -154,9 +145,9 @@ label: {
 }
 ```
 
-<iframe src="/demos/api/registry/port-label-layout/inside-outside"></iframe>
+<code id="port-label-layout-inside-outside" src="@/src/api/port-label-layout/inside-outside/index.tsx"></code>
 
-### *Radial*
+### Radial
 
 将标签放在圆形或椭圆形节点的外围。支持一下两种布局：
 
@@ -173,8 +164,6 @@ interface RadialArgs {
 }
 ```
 
-<span class="tag-param">参数<span>
-
 | 名称   | 类型           | 必选 | 默认值 | 描述                                      |
 |--------|----------------|:----:|--------|-----------------------------------------|
 | offset | number         |      | `20`   | 从节点中心到标签位置的方向上的偏移量。     |
@@ -182,8 +171,6 @@ interface RadialArgs {
 | y      | number         |      | -      | 用指定的 Y 坐标替换计算结果中的 Y 坐标。   |
 | angle  | number         |      | -      | 用指定的旋转角度替换计算结果中的旋转角度。 |
 | attrs  | Attr.CellAttrs |      | -      | 标签属性。                                 |
-
-<span class="tag-example">用法</span>
 
 ```ts
 label: {
@@ -193,27 +180,27 @@ label: {
 }
 ```
 
-<iframe src="/demos/api/registry/port-label-layout/radial"></iframe>
+<code id="port-label-layout-radial" src="@/src/api/port-label-layout/radial/index.tsx"></code>
 
-## registry
+## 自定义连接桩标签布局
 
-链接桩标签定位是一个具有如下签名的函数，返回标签相对于链接桩的位置和旋转角度。
+连接桩标签定位是一个具有如下签名的函数，返回标签相对于连接桩的位置和旋转角度。
 
-```sign
+```ts
 type Definition<T> = (
-  portPosition: Point,  // 链接桩的位置
-  elemBBox: Rectangle,  // 节点的包围盒
-  args: T,              // 标签位置参数
+  portPosition: Point, // 连接桩的位置
+  elemBBox: Rectangle, // 节点的包围盒
+  args: T, // 标签位置参数
 ) => Result
 
 interface Result {
   position: Point.PointLike // 标签相对于位置
-  angle: number             // 标签的旋转角度
-  attrs: Attr.CellAttrs     // 标签的属性
+  angle: number // 标签的旋转角度
+  attrs: Attr.CellAttrs // 标签的属性
 }
 ```
 
-所以我们可以按照上面规则来创建自定义布局算法，例如，实现一个位于链接桩右下角的布局：
+所以我们可以按照上面规则来创建自定义布局算法，例如，实现一个位于连接桩右下角的布局：
 
 ```ts
 function bottomRight(portPosition, elemBBox, args) {
@@ -222,8 +209,8 @@ function bottomRight(portPosition, elemBBox, args) {
 
   return {
     position: {
-     portPosition.x + dx, 
-     portPosition.y + dy, 
+     portPosition.x + dx,
+     portPosition.y + dy,
     }
   }
 }
@@ -231,47 +218,8 @@ function bottomRight(portPosition, elemBBox, args) {
 
 布局算法实现后，需要注册到系统，注册后就可以像内置布局算法那样来使用。
 
-### register
-
-```sign
-/**
- * 
- */
-register(entities: { [name: string]: Definition }, force?: boolean): void
-register(name: string, entity: Definition, force?: boolean): Definition
-```
-
-注册自定义布局算法。
-
-### unregister
-
-```sign
-unregister(name: string): Definition | null
-```
-
-删除注册的自定义布局算法。
-
-实际上，我们将该命名空间的中 `register` 和 `unregister` 两个方法分别挂载为 Graph 的两个静态方法 `Graph.registerPortLabelLayout` 和 `Graph.unregisterPortLabelLayout`，所以我们可以像下面这样来注册刚刚定义的布局算法：
-
-
 ```ts
 Graph.registerPortLabelLayout('bottomRight', bottomRight)
-```
-
-或者：
-
-```ts
-Graph.registerPortLayout('bottomRight', (portPosition, elemBBox, args) => {
-  const dx = args.dx || 10
-  const dy = args.dy || 10
-
-  return {
-    position: {
-     portPosition.x + dx, 
-     portPosition.y + dy, 
-    }
-  }
-})
 ```
 
 注册以后，我们就可以像内置布局算法那样来使用：

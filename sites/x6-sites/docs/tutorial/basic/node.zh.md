@@ -1,139 +1,150 @@
 ---
-title: 节点 Node
+title: 节点
 order: 1
 redirect_from:
   - /zh/docs
-  - /zh/docs/tutorial
   - /zh/docs/tutorial/basic
+  - /zh/docs/tutorial/basic/basic
 ---
 
-在[快速上手](/zh/docs/tutorial/getting-started)案例中，我们通过 JSON 数据来快速添加两个矩形节点和一条边到画布中，并简单介绍了如何定制节点样式。接下来我们将学习更多创建节点的方式，并了解创建节点的基础选项。
+:::info{title=在本章节中主要介绍节点相关的知识,通过阅读,你可以了解到}
 
-## 创建节点
+- X6 支持的节点渲染方式
+- 添加节点方法
+- X6 内置的节点类型
+- 如何自定义节点
+- 如何通过 API 修改节点
 
-### 选项
+:::
 
-节点都有共同的基类 [Cell](/zh/docs/tutorial/basic/cell)，除了[从 Cell 继承的选项](/zh/docs/tutorial/basic/cell#基础选项)外，还支持以下选项。
+## 节点渲染方式
 
-| 属性名 | 类型   | 默认值 | 描述                         |
-|--------|--------|--------|----------------------------|
-| x      | Number | 0      | 节点位置 x 坐标，单位为 'px'。 |
-| y      | Number | 0      | 节点位置 y 坐标，单位为 'px'。 |
-| width  | Number | 1      | 节点宽度，单位为 'px'。        |
-| height | Number | 1      | 节点高度，单位为 'px'。        |
-| angle  | Number | 0      | 节点旋转角度。                |
+X6 是基于 `SVG` 的渲染引擎，可以使用不同的 SVG 元素渲染节点和边，非常适合节点内容比较简单的场景。面对复杂的节点， `SVG` 中有一个特殊的 `foreignObject` 元素，在该元素中可以内嵌任何 XHTML 元素，可以借助该元素来渲染 HTML、React/Vue/Angular 组件到需要位置，这会给项目开发带来非常大的便利。
 
-接下来我们就一起来看看，如何使用这些选项来创建节点。
+在选择渲染方式时我们推荐：
 
-### 方式一：构造函数
+- 如果节点内容比较简单，而且需求比较固定，使用 `SVG` 节点
+- 其他场景，都推荐使用当前项目所使用的框架来渲染节点
 
+:::warning{title=注意}
+React/Vue/HTML 渲染方式也存在一些限制，因为浏览器的兼容性问题，有时会出现一些异常的渲染行为。主要表现形式为节点内容展示不全或者节点内容闪烁。可以通过一些方法规避，比如在节点内部元素的 css 样式中不要使用 `position:absolute`、`position:relative`、`tranform`、`opacity`。 
+:::
 
-我们在 X6 的 `Shape` 命名空间中内置了一些基础节点，如 `Rect`、`Circle`、`Ellipse` 等，可以使用这些节点的构造函数来创建节点。
+下面的介绍都是基于 `SVG` 节点，但是其他渲染形式的使用方式与其非常类似，在进阶教程中我们会再次介绍。
 
-```ts
-import { Shape } from '@antv/x6'
+## 添加节点
 
-// 创建节点
-const rect = new Shape.Rect({
-  x: 100,
-  y: 200,
-  width: 80,
-  height: 40,
-  angle: 30,
-  attrs: {
-    body: {
-      fill: 'blue',
-    },
-    label: {
-      text: 'Hello',
-      fill: 'white',
-    },
-  },
-})
+节点和边都有共同的基类 [Cell](/zh/docs/api/model/cell)，除了从 `Cell` 继承属性外，还支持以下选项。
 
-// 添加到画布
-graph.addNode(rect)
-```
-
-这里我们创建了一个矩形节点，分别通过 `x` 和 `y` 选项指定了节点的位置，通过 `width` 和 `height` 选项指定了节点的大小，通过 `angle` 指定了节点的旋转角度，通过 `attrs` 选项指定了[节点样式](#节点样式)，然后通过 `graph.addNode` 方法将节点添加到画布，节点添加到画布后将触发画布重新渲染，最后节点被渲染到画布中。
-
-我们也可以先创建节点，然后调用节点提供的方法来设置节点的大小、位置、旋转角度、样式等。
+| 属性名 | 类型   | 默认值 | 描述                       |
+|--------|--------|--------|--------------------------|
+| x      | number | 0      | 节点位置 x 坐标，单位为 px。 |
+| y      | number | 0      | 节点位置 y 坐标，单位为 px。 |
+| width  | number | 1      | 节点宽度，单位为 px。        |
+| height | number | 1      | 节点高度，单位为 px。        |
+| angle  | number | 0      | 节点旋转角度。              |
 
 ```ts
-const rect = new Shape.Rect()
-
-rect
-  // 设置节点位置
-  .position(100, 200)
-  // 设置节点大小
-  .resize(80, 40)
-  // 旋转节点
-  .rotate(30)
-  // 设置节点样式
-  .attr({
-    body: {
-      fill: 'blue',
-    },
-    label: {
-      text: 'Hello',
-      fill: 'white',
-    },
-  })
-
-// 添加到画布
-graph.addNode(rect)
-```
-
-### 方式二：graph.addNode
-
-另外，我们还可以使用 `graph.addNode` 方法来创建节点并添加节点到画布，**推荐大家使用这个便利的方法**。
-
-```ts
-const rect = graph.addNode({
-  shape: 'rect', // 指定使用何种图形，默认值为 'rect'
-  x: 100,
-  y: 200,
-  width: 80,
-  height: 40,
-  angle: 30,
-  attrs: {
-    body: {
-      fill: 'blue',
-    },
-    label: {
-      text: 'Hello',
-      fill: 'white',
-    },
-  },
-})
-```
-
-这里的关键是使用 `shape` 来指定节点图形，默认值为 `'rect'`，其他选项与使用节点构造函数创建节点的选项一致。在 X6 内部，我们通过 `shape` 指定的图形找到对应的构造函数来初始化节点，并将其添加到画布。内置节点构造函数与 `shape` 名称对应关系[参考此表](/zh/docs/tutorial/basic/cell#内置节点)。除了使用[内置节点](/zh/docs/tutorial/basic/cell#内置节点)，我们还可以使用注册的自定义节点，详情请参考[自定义节点](/zh/docs/tutorial/intermediate/custom-node)教程。
-
-## 定制样式 Attrs
-
-我们在之前的教程中介绍了[如何通过 attrs 选项来定制样式](/zh/docs/tutorial/basic/cell#attrs-1)，并且简单学习了如何通过[选项默认值](/zh/docs/tutorial/basic/cell#选项默认值)和[自定义选项](/zh/docs/tutorial/basic/cell#自定义选项)来定制节点，请结合这几个教程学习如何定制节点样式。
-
-例如 `Shape.Rect` 节点定义了 `'body'`（代表 `<rect>` 元素）和 `'label'`（代表 `<text>` 元素）两个选择器。我们在创建矩形节点时可以像下面这样定义节点样式。
-
-```ts
-const rect = new Shape.Rect({
+graph.addNode({
+  shape: 'rect',
   x: 100,
   y: 40,
   width: 100,
   height: 40,
-  attrs: { 
-    body: {
-      fill: '#2ECC71', // 背景颜色
-      stroke: '#000',  // 边框颜色
-    },
-    label: {
-      text: 'rect',    // 文本
-      fill: '#333',    // 文字颜色
-      fontSize: 13,    // 文字大小
-    },
-  },
 })
 ```
 
-<iframe src="/demos/tutorial/basic/node/style"></iframe>
+## 内置节点
+
+上面使用 `shape` 来指定了节点的图形，`shape` 的默认值为 `rect`。X6 内置节点与 `shape` 名称对应关系如下表。
+
+| 构造函数       | shape 名称 | 描述                                           |
+|----------------|------------|----------------------------------------------|
+| Shape.Rect     | rect       | 矩形。                                          |
+| Shape.Circle   | circle     | 圆形。                                          |
+| Shape.Ellipse  | ellipse    | 椭圆。                                          |
+| Shape.Polygon  | polygon    | 多边形。                                        |
+| Shape.Polyline | polyline   | 折线。                                          |
+| Shape.Path     | path       | 路径。                                          |
+| Shape.Image    | image      | 图片。                                          |
+| Shape.HTML     | html       | HTML 节点，使用 `foreignObject` 渲染 HTML 片段。 |
+
+<code id="node-shapes" src="@/src/tutorial/basic/node/shapes/index.tsx"></code>
+
+## 定制节点
+
+我们可以通过 `markup` 和 `attrs` 来定制节点的形状和样式，`markup` 可以类比 `HTML`，`attrs` 类比 `CSS`。强烈建议仔细阅读 [markup](/zh/docs/api/model/cell#markup) 和 [attrs](/zh/docs/api/model/cell#attrs) 文档。
+
+接下来我们会遇到一个问题，定制的内容要被多个节点使用，是不是需要每个节点都重新定义一次呢？答案是否定的，X6 提供了便捷的方式，可以让不同的节点复用配置。
+
+<code id="node-registry" src="@/src/tutorial/basic/node/registry/index.tsx"></code>
+
+## 修改节点
+
+在渲染完成之后，我们还可以通过 API 修改节点的所有属性。我们会常用到下面两个方法：
+
+- node.prop(path, value)，详细使用见 [prop](/zh/docs/api/model/cell#节点和边的属性-properties)。
+- node.attr(path, value)，详细使用见 [attr](/zh/docs/api/model/cell#元素属性-attrs)。
+
+首先来看 `prop`，我们直接打印 X6 默认 rect 节点的 `prop` 的值。
+
+```ts
+const node = graph.addNode({
+  shape: 'rect',
+  width: 100,
+  height: 40,
+  x: 100,
+  y: 100,
+  label: 'edge',
+})
+console.log(node.prop())
+
+// 结果
+{
+  "angle": 0,
+  "position": {
+    "x": 100,
+    "y": 100
+  },
+  "size": {
+    "width": 100,
+    "height": 40
+  },
+  "attrs": {
+    "text": {
+      "fontSize": 14,
+      "fill": "#000000",
+      "refX": 0.5,
+      "refY": 0.5,
+      "textAnchor": "middle",
+      "textVerticalAnchor": "middle",
+      "fontFamily": "Arial, helvetica, sans-serif",
+      "text": "node"
+    },
+    "rect": {
+      "fill": "#ffffff",
+      "stroke": "#333333",
+      "strokeWidth": 2
+    },
+    "body": {
+      "refWidth": "100%",
+      "refHeight": "100%"
+    }
+  },
+  "visible": true,
+  "shape": "rect",
+  "id": "ab47cadc-4104-457c-971f-50fbb077508a",
+  "zIndex": 1
+}
+```
+
+从上面结果可以看到，`prop` 是配置处理后的一份新的配置，它的值可以通过方法进行更新，更新之后，节点会立即刷新到最新状态。为了更快捷的修改节点的 `attrs`，X6 提供了 `attr` 方法。
+
+```ts
+source.prop('size', { width: 120, height: 50 }) // 修改 x 坐标
+source.attr('rect/fill', '#ccc') // 修改填充色，等价于 source.prop('attrs/rect/fill', '#ccc')
+```
+
+<code id="node-prop" src="@/src/tutorial/basic/node/prop/index.tsx"></code>
+
+在上面 json 数中，我们可以看到有一些属性 `refWidth`、`refHeight` 并不是 SVG 的原生属性，它们其实是 X6 内置的特殊属性，比如 `refWidth` 就是相对宽度。更多详细的特殊属性参考 [attrs](/zh/docs/api/model/attrs)。

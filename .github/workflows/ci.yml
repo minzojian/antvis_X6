@@ -10,16 +10,12 @@ on:
       - beta
 jobs:
   ci:
-    strategy:
-      matrix:
-        codecov: [x6, x6-common, x6-geometry]
     runs-on: ubuntu-latest
-    env:
-      TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
-      TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
     steps:
       - name: ⤵️　Checkout
         uses: actions/checkout@v3
+        with:
+          persist-credentials: false
 
       - name: 🎉　Setup nodejs
         uses: actions/setup-node@v3
@@ -63,11 +59,11 @@ jobs:
 
 
       - name: 💡　Codecov
-        uses: codecov/codecov-action@v1
+        uses: codecov/codecov-action@v3
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          files: ./packages/${{ matrix.codecov }}/test/coverage/lcov.info
-          flags: ${{ matrix.codecov }}
+          files: ./packages/x6/test/coverage/lcov.info
+          flags: x6
 
       - name: 🔀　Dispatch(ci_passed)
         uses: peter-evans/repository-dispatch@v2

@@ -1,5 +1,5 @@
 import { Point } from '@antv/x6-geometry'
-import { Dom } from '@antv/x6-common'
+import { Dom, ModifierKey } from '@antv/x6-common'
 import { Config } from '../../config'
 import { View } from '../../view/view'
 import { ToolsView } from '../../view/tool'
@@ -145,6 +145,7 @@ export class Vertices extends ToolsView.ToolItem<EdgeView, Vertices.Options> {
     edgeView.cell.startBatch('move-vertex', { ui: true, toolId: this.cid })
     if (!this.options.stopPropagation) {
       const { e: evt, x, y } = this.getMouseEventArgs(e)
+      this.eventData(evt, { start: { x, y } })
       edgeView.notifyMouseDown(evt, x, y)
     }
   }
@@ -165,6 +166,13 @@ export class Vertices extends ToolsView.ToolItem<EdgeView, Vertices.Options> {
     }
   }
 
+  protected stopBatch(vertexAdded: boolean) {
+    this.cell.stopBatch('move-vertex', { ui: true, toolId: this.cid })
+    if (vertexAdded) {
+      this.cell.stopBatch('add-vertex', { ui: true, toolId: this.cid })
+    }
+  }
+
   protected onHandleChanged({ e }: Vertices.Handle.EventArgs['changed']) {
     const options = this.options
     const edgeView = this.cellView
@@ -174,6 +182,7 @@ export class Vertices extends ToolsView.ToolItem<EdgeView, Vertices.Options> {
     }
 
     if (!options.removeRedundancies) {
+      this.stopBatch(this.eventData(e).vertexAdded)
       return
     }
 
@@ -188,16 +197,19 @@ export class Vertices extends ToolsView.ToolItem<EdgeView, Vertices.Options> {
 
     this.blur()
 
-    edgeView.cell.stopBatch('move-vertex', { ui: true, toolId: this.cid })
-
-    if (this.eventData(e).vertexAdded) {
-      edgeView.cell.stopBatch('add-vertex', { ui: true, toolId: this.cid })
-    }
+    this.stopBatch(this.eventData(e).vertexAdded)
 
     const { e: evt, x, y } = this.getMouseEventArgs(e)
 
     if (!this.options.stopPropagation) {
       edgeView.notifyMouseUp(evt, x, y)
+      const { start } = this.eventData(evt)
+      if (start) {
+        const { x: startX, y: startY } = start
+        if (startX === x && startY === y) {
+          edgeView.onClick(evt as unknown as Dom.ClickEvent, x, y)
+        }
+      }
     }
 
     edgeView.checkMouseleave(evt)
@@ -237,14 +249,19 @@ export class Vertices extends ToolsView.ToolItem<EdgeView, Vertices.Options> {
     }
   }
 
+  protected allowAddVertex(e: Dom.MouseDownEvent) {
+    const guard = this.guard(e)
+    const addable = this.options.addable && this.cellView.can('vertexAddable')
+    const matchModifiers = this.options.modifiers
+      ? ModifierKey.isMatch(e, this.options.modifiers)
+      : true
+    return !guard && addable && matchModifiers
+  }
+
   protected onPathMouseDown(evt: Dom.MouseDownEvent) {
     const edgeView = this.cellView
 
-    if (
-      this.guard(evt) ||
-      !this.options.addable ||
-      !edgeView.can('vertexAddable')
-    ) {
+    if (!this.allowAddVertex(evt)) {
       return
     }
 
@@ -278,6 +295,7 @@ export namespace Vertices {
     removable?: boolean
     removeRedundancies?: boolean
     stopPropagation?: boolean
+    modifiers?: string | ModifierKey[]
     attrs?: Attr.SimpleAttrs | ((handle: Handle) => Attr.SimpleAttrs)
     createHandle?: (options: Handle.Options) => Handle
     processHandle?: (handle: Handle) => void

@@ -1,38 +1,7 @@
-## @antv/x6 [2.0.8](https://github.com/antvis/x6/compare/@antv/x6@2.0.7...@antv/x6@2.0.8) (2022-12-08)
+# @antv/x6
 
+## 2.11.3
 
-### Bug Fixes
+### Patch Changes
 
-* trigger preventDefault by origin event ([#3017](https://github.com/antvis/x6/issues/3017)) ([4a6a634](https://github.com/antvis/x6/commit/4a6a634a8acfad5c1a7bb93ac17fb3b97239e853))
-
-## @antv/x6 [2.0.7](https://github.com/antvis/x6/compare/@antv/x6@2.0.6...@antv/x6@2.0.7) (2022-12-06)
-
-
-### Bug Fixes
-
-* hide elems when visible is false ([#3007](https://github.com/antvis/x6/issues/3007)) ([057d520](https://github.com/antvis/x6/commit/057d5209ff827d0231ecc6562e768907f75aff2d))
-
-## @antv/x6 [2.0.4](https://github.com/antvis/x6/compare/@antv/x6@2.0.3...@antv/x6@2.0.4) (2022-11-25)
-
-
-### Bug Fixes
-
-* npm version ([cb0cfde](https://github.com/antvis/x6/commit/cb0cfdeb4dbe8858569e6899db08ccb9ab8ba4e7))
-
-## @antv/x6 [2.0.3](https://github.com/antvis/x6/compare/@antv/x6@2.0.2...@antv/x6@2.0.3) (2022-11-25)
-
-## @antv/x6 [2.0.2](https://github.com/antvis/x6/compare/@antv/x6@2.0.1...@antv/x6@2.0.2) (2022-11-24)
-
-
-### Bug Fixes
-
-* get correct center when zoom ([#2934](https://github.com/antvis/x6/issues/2934)) ([557d2df](https://github.com/antvis/x6/commit/557d2df1529226e505e3488a43fa358191d79271))
-
-## @antv/x6 [2.0.1](https://github.com/antvis/x6/compare/@antv/x6@2.0.0...@antv/x6@2.0.1) (2022-11-24)
-
-
-### Bug Fixes
-
-* Cannot use "this" here: [#2824](https://github.com/antvis/x6/issues/2824) ([#2855](https://github.com/antvis/x6/issues/2855)) ([10347d0](https://github.com/antvis/x6/commit/10347d069b23e4cfaf156138a39e2f5f996f0e29))
-* resize graph when scale scroller ([#2903](https://github.com/antvis/x6/issues/2903)) ([cee4aa4](https://github.com/antvis/x6/commit/cee4aa4e53b2821ed11d5602fccdb36625957c72))
-* sync render when change position ([#2860](https://github.com/antvis/x6/issues/2860)) ([2194769](https://github.com/antvis/x6/commit/2194769e362ce60d19652b29047a394cac4077d0))
+- fix visiual render error

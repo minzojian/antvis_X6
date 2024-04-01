@@ -55,13 +55,13 @@ graph.addNode({
       {
         id: 'port2',
         group: 'group1',
-        // 通过 args 指定绝对位置和链接桩的旋转角度
+        // 通过 args 指定绝对位置和连接桩的旋转角度
         args: {
           x: 0.6,
           y: 32,
           angle: 45,
         },
-        // 自定义链接桩渲染的 SVG
+        // 自定义连接桩渲染的 SVG
         markup: [
           {
             tagName: 'path',

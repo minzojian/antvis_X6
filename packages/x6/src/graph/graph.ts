@@ -21,10 +21,10 @@ import { SizeManager as Size } from './size'
 
 export class Graph extends Basecoat<EventArgs> {
   private installedPlugins: Set<Graph.Plugin> = new Set()
+  public model: Model
 
   public readonly options: GraphOptions.Definition
   public readonly css: Css
-  public readonly model: Model
   public readonly view: GraphView
   public readonly grid: Grid
   public readonly defs: Defs
@@ -702,8 +702,8 @@ export class Graph extends Basecoat<EventArgs> {
   /**
    * Position the center of graph to the center of the viewport.
    */
-  center() {
-    return this.centerPoint()
+  center(options?: Transform.CenterOptions) {
+    return this.centerPoint(options)
   }
 
   /**
@@ -712,13 +712,25 @@ export class Graph extends Basecoat<EventArgs> {
    * only center along the specified dimension and keep the other coordinate
    * unchanged.
    */
-  centerPoint(x: number, y: null | number): this
-  centerPoint(x: null | number, y: number): this
-  centerPoint(): this
-  centerPoint(x?: number | null, y?: number | null) {
+  centerPoint(
+    x: number,
+    y: null | number,
+    options?: Transform.CenterOptions,
+  ): this
+  centerPoint(
+    x: null | number,
+    y: number,
+    options?: Transform.CenterOptions,
+  ): this
+  centerPoint(optons?: Transform.CenterOptions): this
+  centerPoint(
+    x?: number | null | Transform.CenterOptions,
+    y?: number | null,
+    options?: Transform.CenterOptions,
+  ) {
     const scroller = this.getPlugin<any>('scroller')
     if (scroller) {
-      scroller.centerPoint(x as number, y as number)
+      scroller.centerPoint(x as number, y as number, options)
     } else {
       this.transform.centerPoint(x as number, y as number)
     }
@@ -737,10 +749,10 @@ export class Graph extends Basecoat<EventArgs> {
     return this
   }
 
-  centerCell(cell: Cell) {
+  centerCell(cell: Cell, options?: Transform.PositionContentOptions) {
     const scroller = this.getPlugin<any>('scroller')
     if (scroller) {
-      scroller.centerCell(cell)
+      scroller.centerCell(cell, options)
     } else {
       this.transform.centerCell(cell)
     }
@@ -752,10 +764,11 @@ export class Graph extends Basecoat<EventArgs> {
     point: Point.PointLike,
     x: number | string,
     y: number | string,
+    options: Transform.CenterOptions = {},
   ) {
     const scroller = this.getPlugin<any>('scroller')
     if (scroller) {
-      scroller.positionPoint(point, x, y)
+      scroller.positionPoint(point, x, y, options)
     } else {
       this.transform.positionPoint(point, x, y)
     }
@@ -763,10 +776,14 @@ export class Graph extends Basecoat<EventArgs> {
     return this
   }
 
-  positionRect(rect: Rectangle.RectangleLike, direction: Transform.Direction) {
+  positionRect(
+    rect: Rectangle.RectangleLike,
+    direction: Transform.Direction,
+    options?: Transform.CenterOptions,
+  ) {
     const scroller = this.getPlugin<any>('scroller')
     if (scroller) {
-      scroller.positionRect(rect, direction)
+      scroller.positionRect(rect, direction, options)
     } else {
       this.transform.positionRect(rect, direction)
     }
@@ -774,10 +791,14 @@ export class Graph extends Basecoat<EventArgs> {
     return this
   }
 
-  positionCell(cell: Cell, direction: Transform.Direction) {
+  positionCell(
+    cell: Cell,
+    direction: Transform.Direction,
+    options?: Transform.CenterOptions,
+  ) {
     const scroller = this.getPlugin<any>('scroller')
     if (scroller) {
-      scroller.positionCell(cell, direction)
+      scroller.positionCell(cell, direction, options)
     } else {
       this.transform.positionCell(cell, direction)
     }
@@ -1193,15 +1214,57 @@ export class Graph extends Basecoat<EventArgs> {
   }
 
   getPlugin<T extends Graph.Plugin>(pluginName: string): T | undefined {
-    let result: Graph.Plugin | undefined
+    return Array.from(this.installedPlugins).find(
+      (plugin) => plugin.name === pluginName,
+    ) as T
+  }
 
-    this.installedPlugins.forEach((plugin) => {
-      if (plugin.name === pluginName) {
-        result = plugin
-      }
+  getPlugins<T extends Graph.Plugin[]>(pluginName: string[]): T | undefined {
+    return Array.from(this.installedPlugins).filter((plugin) =>
+      pluginName.includes(plugin.name),
+    ) as T
+  }
+
+  enablePlugins(plugins: string[] | string) {
+    let postPlugins = plugins
+    if (!Array.isArray(postPlugins)) {
+      postPlugins = [postPlugins]
+    }
+    const aboutToChangePlugins = this.getPlugins(postPlugins)
+    aboutToChangePlugins?.forEach((plugin) => {
+      plugin?.enable?.()
     })
+    return this
+  }
 
-    return result as T
+  disablePlugins(plugins: string[] | string) {
+    let postPlugins = plugins
+    if (!Array.isArray(postPlugins)) {
+      postPlugins = [postPlugins]
+    }
+    const aboutToChangePlugins = this.getPlugins(postPlugins)
+    aboutToChangePlugins?.forEach((plugin) => {
+      plugin?.disable?.()
+    })
+    return this
+  }
+
+  isPluginEnabled(pluginName: string) {
+    const pluginIns = this.getPlugin(pluginName)
+    return pluginIns?.isEnabled?.()
+  }
+
+  disposePlugins(plugins: string[] | string) {
+    let postPlugins = plugins
+    if (!Array.isArray(postPlugins)) {
+      postPlugins = [postPlugins]
+    }
+    const aboutToChangePlugins = this.getPlugins(postPlugins)
+    aboutToChangePlugins?.forEach((plugin) => {
+      plugin.dispose()
+      this.installedPlugins.delete(plugin)
+    })
+    return this
   }
 
   // #endregion
@@ -1209,9 +1272,10 @@ export class Graph extends Basecoat<EventArgs> {
   // #region dispose
 
   @Basecoat.dispose()
-  dispose() {
-    this.clearCells()
-    this.off()
+  dispose(clean = true) {
+    if (clean) {
+      this.model.dispose()
+    }
 
     this.css.dispose()
     this.defs.dispose()
@@ -1244,6 +1308,7 @@ export namespace Graph {
   export import TransformManager = Transform
   export import HighlightManager = Highlight
   export import BackgroundManager = Background
+  export import PanningManager = Panning
 }
 
 export namespace Graph {
@@ -1349,5 +1414,9 @@ export namespace Graph {
     name: string
     init: (graph: Graph, ...options: any[]) => any
     dispose: () => void
+
+    enable?: () => void
+    disable?: () => void
+    isEnabled?: () => boolean
   }
 }

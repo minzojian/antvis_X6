@@ -115,7 +115,7 @@ const graph = new Graph({
   },
 })
 
-fetch('../data/er.json')
+fetch('/data/er.json')
   .then((response) => response.json())
   .then((data) => {
     const cells: Cell[] = []

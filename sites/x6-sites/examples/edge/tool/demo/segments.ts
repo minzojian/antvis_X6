@@ -3,13 +3,6 @@ import { Graph } from '@antv/x6'
 const graph = new Graph({
   container: document.getElementById('container'),
   grid: true,
-  onToolItemCreated({ tool }) {
-    const handle = tool as any
-    const options = handle.options
-    if (options && options.index % 2 === 1) {
-      tool.setAttrs({ fill: 'red' })
-    }
-  },
 })
 
 graph.addEdge({

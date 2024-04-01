@@ -1,6 +1,6 @@
 {
   "name": "@antv/x6-plugin-stencil",
-  "version": "2.0.2",
+  "version": "2.1.5",
   "description": "stencil plugin for X6",
   "main": "lib/index.js",
   "module": "es/index.js",
@@ -10,7 +10,8 @@
   "files": [
     "dist",
     "es",
-    "lib"
+    "lib",
+    "src"
   ],
   "keywords": [
     "plugin",
@@ -37,9 +38,11 @@
     "coveralls": "rss",
     "pretest": "rss"
   },
-  "peerDependencies": {
-    "@antv/x6": "^2.x",
+  "dependencies": {
     "@antv/x6-plugin-dnd": "^2.x"
+  },
+  "peerDependencies": {
+    "@antv/x6": "^2.x"
   },
   "devDependencies": {
     "@antv/x6": "^2.x",

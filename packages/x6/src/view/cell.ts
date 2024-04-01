@@ -67,8 +67,7 @@ export class CellView<
     }
 
     if (actions) {
-      Object.keys(actions).forEach((key) => {
-        const val = actions[key]
+      Object.entries(actions).forEach(([key, val]) => {
         const raw = ret.actions[key]
         if (val && raw) {
           ret.actions[key] = mergeActions(raw, val)
@@ -252,7 +251,11 @@ export class CellView<
   }
 
   protected setup() {
-    this.cell.on('changed', ({ options }) => this.onAttrsChange(options))
+    this.cell.on('changed', this.onCellChanged, this)
+  }
+
+  protected onCellChanged({ options }: Cell.EventArgs['changed']) {
+    this.onAttrsChange(options)
   }
 
   protected onAttrsChange(options: Cell.MutateOptions) {
@@ -553,11 +556,11 @@ export class CellView<
   addTools(options: ToolsView.Options | null): this
   addTools(tools: ToolsView | null): this
   addTools(config: ToolsView | ToolsView.Options | null) {
-    if (!this.can('toolsAddable')) {
-      return this
-    }
     this.removeTools()
     if (config) {
+      if (!this.can('toolsAddable')) {
+        return this
+      }
       const tools = ToolsView.isToolsView(config)
         ? config
         : new ToolsView(config)
@@ -738,6 +741,11 @@ export class CellView<
 
     // Entering another view
     view.onMouseEnter(e as Dom.MouseEnterEvent)
+  }
+
+  @CellView.dispose()
+  dispose() {
+    this.cell.off('changed', this.onCellChanged, this)
   }
 
   // #endregion

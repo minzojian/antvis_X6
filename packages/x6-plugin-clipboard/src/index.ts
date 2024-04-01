@@ -1,19 +1,27 @@
-import { Cell, Graph, IDisablable, Basecoat } from '@antv/x6'
+import { Cell, Graph, Basecoat } from '@antv/x6'
 import { ClipboardImpl } from './clipboard'
 import './api'
 
 export class Clipboard
   extends Basecoat<Clipboard.EventArgs>
-  implements IDisablable
+  implements Graph.Plugin
 {
+  public name = 'clipboard'
   private clipboardImpl: ClipboardImpl
   private graph: Graph
   public options: Clipboard.Options
-  public name = 'clipboard'
 
-  constructor(options: Clipboard.Options) {
+  get disabled() {
+    return this.options.enabled !== true
+  }
+
+  get cells() {
+    return this.clipboardImpl.cells
+  }
+
+  constructor(options: Clipboard.Options = {}) {
     super()
-    this.options = options
+    this.options = { enabled: true, ...options }
   }
 
   init(graph: Graph) {
@@ -32,14 +40,12 @@ export class Clipboard
     if (this.disabled) {
       this.options.enabled = true
     }
-    return this
   }
 
   disable() {
     if (!this.disabled) {
       this.options.enabled = false
     }
-    return this
   }
 
   toggleEnabled(enabled?: boolean) {
@@ -60,8 +66,8 @@ export class Clipboard
     return this
   }
 
-  isEmpty() {
-    return this.clipboardImpl.isEmpty()
+  isEmpty(options: Clipboard.Options = {}) {
+    return this.clipboardImpl.isEmpty(options)
   }
 
   getCellsInClipboard() {
@@ -110,17 +116,9 @@ export class Clipboard
 
   // #endregion
 
-  get disabled() {
-    return this.options.enabled !== true
-  }
-
   protected get commonOptions() {
     const { enabled, ...others } = this.options
     return others
-  }
-
-  protected get cells() {
-    return this.clipboardImpl.cells
   }
 
   protected notify<K extends keyof Clipboard.EventArgs>(

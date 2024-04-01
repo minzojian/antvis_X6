@@ -244,6 +244,13 @@ export class Model extends Basecoat<Model.EventArgs> {
     return node
   }
 
+  updateNode(metadata: Node.Metadata, options: Model.SetOptions = {}) {
+    const node = this.createNode(metadata)
+    const prop = node.getProp()
+    node.dispose()
+    return this.updateCell(prop, options)
+  }
+
   createNode(metadata: Node.Metadata) {
     return Node.create(metadata)
   }
@@ -256,6 +263,13 @@ export class Model extends Basecoat<Model.EventArgs> {
 
   createEdge(metadata: Edge.Metadata) {
     return Edge.create(metadata)
+  }
+
+  updateEdge(metadata: Edge.Metadata, options: Model.SetOptions = {}) {
+    const edge = this.createEdge(metadata)
+    const prop = edge.getProp()
+    edge.dispose()
+    return this.updateCell(prop, options)
   }
 
   addCell(cell: Cell | Cell[], options: Model.AddOptions = {}) {
@@ -295,6 +309,23 @@ export class Model extends Basecoat<Model.EventArgs> {
     return this
   }
 
+  updateCell(prop: Cell.Properties, options: Model.SetOptions = {}): boolean {
+    const existing = prop.id && this.getCell(prop.id)
+    if (existing) {
+      return this.batchUpdate(
+        'update',
+        () => {
+          Object.entries(prop).forEach(([key, val]) =>
+            existing.setProp(key, val, options),
+          )
+          return true
+        },
+        prop,
+      )
+    }
+    return false
+  }
+
   removeCell(cellId: string, options?: Collection.RemoveOptions): Cell | null
   removeCell(cell: Cell, options?: Collection.RemoveOptions): Cell | null
   removeCell(
@@ -309,6 +340,7 @@ export class Model extends Basecoat<Model.EventArgs> {
   }
 
   updateCellId(cell: Cell, newId: string) {
+    if (cell.id === newId) return
     this.startBatch('update', { id: newId })
     cell.prop('id', newId)
     const newCell = cell.clone({ keepId: true })
@@ -1291,6 +1323,11 @@ export class Model extends Basecoat<Model.EventArgs> {
   }
 
   // #endregion
+
+  @Model.dispose()
+  dispose() {
+    this.collection.dispose()
+  }
 }
 
 export namespace Model {

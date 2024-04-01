@@ -13,6 +13,11 @@ export abstract class View<A extends EventArgs = any> extends Basecoat<A> {
     return 2
   }
 
+  /** If need remove `this.container` DOM */
+  protected get disposeContainer() {
+    return true
+  }
+
   constructor() {
     super()
     this.cid = Private.uniqueId()
@@ -39,8 +44,12 @@ export abstract class View<A extends EventArgs = any> extends Basecoat<A> {
       this.removeEventListeners(document)
       this.onRemove()
       delete View.views[this.cid]
+      if (this.disposeContainer) {
+        this.unmount(elem)
+      }
+    } else {
+      this.unmount(elem)
     }
-    this.unmount(elem)
     return this
   }
 
@@ -362,6 +371,11 @@ export abstract class View<A extends EventArgs = any> extends Basecoat<A> {
   normalizeEvent<T extends Dom.EventObject>(evt: T) {
     return View.normalizeEvent(evt)
   }
+
+  @View.dispose()
+  dispose() {
+    this.remove()
+  }
 }
 
 export namespace View {
@@ -418,22 +432,11 @@ export namespace View {
     if (touchEvt) {
       // eslint-disable-next-line no-restricted-syntax
       for (const key in evt) {
-        // copy all the properties from the input event that are not
-        // defined on the touch event (functions included).
         if (touchEvt[key] === undefined) {
           touchEvt[key] = (evt as any)[key]
         }
       }
       normalizedEvent = touchEvt
-    }
-
-    // IE: evt.target could be set to SVGElementInstance for SVGUseElement
-    const target = normalizedEvent.target
-    if (target) {
-      const useElement = target.correspondingUseElement
-      if (useElement) {
-        normalizedEvent.target = useElement
-      }
     }
 
     return normalizedEvent

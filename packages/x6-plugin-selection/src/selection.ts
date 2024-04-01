@@ -126,7 +126,7 @@ export class SelectionImpl extends View<SelectionImpl.EventArgs> {
     const { ui, selection, translateBy, snapped } = options
 
     const allowTranslating =
-      (showNodeSelectionBox !== true || pointerEvents === 'none') &&
+      (showNodeSelectionBox !== true || (pointerEvents && this.getPointerEventsValue(pointerEvents) === 'none')) &&
       !this.translating &&
       !selection
 
@@ -468,12 +468,12 @@ export class SelectionImpl extends View<SelectionImpl.EventArgs> {
         }
       } else {
         const scale = this.graph.transform.getScale()
-        for (let i = 0, len = this.$boxes.length; i < len; i += 1) {
-          this.updateElementPosition(
-            this.$boxes[i],
-            dx * scale.sx,
-            dy * scale.sy,
-          )
+        for (
+          let i = 0, $boxes = this.$boxes, len = $boxes.length;
+          i < len;
+          i += 1
+        ) {
+          this.updateElementPosition($boxes[i], dx * scale.sx, dy * scale.sy)
         }
         this.updateElementPosition(
           this.selectionContainer,
@@ -807,6 +807,12 @@ export class SelectionImpl extends View<SelectionImpl.EventArgs> {
     )
   }
 
+  protected getPointerEventsValue(pointerEvents: 'none' | 'auto' | ((cells: Cell[]) => 'none' | 'auto')) {
+    return typeof pointerEvents === 'string'
+      ? pointerEvents
+      : pointerEvents(this.cells)
+  }
+
   protected createSelectionBox(cell: Cell) {
     this.addCellSelectedClassName(cell)
 
@@ -819,6 +825,7 @@ export class SelectionImpl extends View<SelectionImpl.EventArgs> {
 
         const className = this.boxClassName
         const box = document.createElement('div')
+        const pointerEvents = this.options.pointerEvents
         Dom.addClass(box, className)
         Dom.addClass(box, `${className}-${cell.isNode() ? 'node' : 'edge'}`)
         Dom.attr(box, 'data-cell-id', cell.id)
@@ -828,7 +835,9 @@ export class SelectionImpl extends View<SelectionImpl.EventArgs> {
           top: bbox.y,
           width: bbox.width,
           height: bbox.height,
-          pointerEvents: this.options.pointerEvents || 'auto',
+          pointerEvents: pointerEvents
+            ? this.getPointerEventsValue(pointerEvents)
+            : 'auto',
         })
         Dom.appendTo(box, this.container)
         this.showSelected()
@@ -848,10 +857,15 @@ export class SelectionImpl extends View<SelectionImpl.EventArgs> {
   confirmUpdate() {
     if (this.boxCount) {
       this.hide()
-      for (let i = 0, len = this.$boxes.length; i < len; i += 1) {
-        const box = this.$boxes[i]
+      for (
+        let i = 0, $boxes = this.$boxes, len = $boxes.length;
+        i < len;
+        i += 1
+      ) {
+        const box = $boxes[i]
         const cellId = Dom.attr(box, 'data-cell-id')
         Dom.remove(box)
+        this.boxCount -= 1
         const cell = this.collection.get(cellId)
         if (cell) {
           this.createSelectionBox(cell)
@@ -945,6 +959,8 @@ export class SelectionImpl extends View<SelectionImpl.EventArgs> {
 }
 
 export namespace SelectionImpl {
+  type SelectionEventType = 'leftMouseDown' | 'mouseWheelDown'
+
   export interface CommonOptions {
     model?: Model
     collection?: Collection
@@ -971,7 +987,10 @@ export namespace SelectionImpl {
     rubberEdge?: boolean
 
     // Whether to respond event on the selectionBox
-    pointerEvents?: 'none' | 'auto'
+    pointerEvents?: 'none' | 'auto' | ((cells: Cell[]) => 'none' | 'auto')
+
+    // with which mouse button the selection can be started
+    eventTypes?: SelectionEventType[]
   }
 
   export interface Options extends CommonOptions {

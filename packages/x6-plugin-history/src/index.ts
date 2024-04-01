@@ -3,7 +3,6 @@ import {
   ObjectExt,
   FunctionExt,
   Basecoat,
-  IDisablable,
   Cell,
   Model,
   Graph,
@@ -12,7 +11,7 @@ import './api'
 
 export class History
   extends Basecoat<History.EventArgs>
-  implements IDisablable
+  implements Graph.Plugin
 {
   public name = 'history'
   public graph: Graph
@@ -25,14 +24,17 @@ export class History
   protected batchLevel = 0
   protected lastBatchIndex = -1
   protected freezed = false
+  protected stackSize = 0 // 0: not limit
 
   protected readonly handlers: (<T extends History.ModelEvents>(
     event: T,
     args: Model.EventArgs[T],
   ) => any)[] = []
 
-  constructor(options: History.Options) {
+  constructor(options: History.Options = {}) {
     super()
+    const { stackSize = 0 } = options
+    this.stackSize = stackSize
     this.options = Util.getOptions(options)
     this.validator = new History.Validator({
       history: this,
@@ -101,7 +103,7 @@ export class History
       const cmd = this.redoStack.pop()
       if (cmd) {
         this.applyCommand(cmd, options)
-        this.undoStack.push(cmd)
+        this.undoStackPush(cmd)
         this.notify('redo', cmd, options)
       }
     }
@@ -122,6 +124,23 @@ export class History
       }
     }
     return this
+  }
+
+  getSize() {
+    return this.stackSize
+  }
+
+  getUndoRemainSize() {
+    const ul = this.undoStack.length
+    return this.stackSize - ul
+  }
+
+  getUndoSize() {
+    return this.undoStack.length
+  }
+
+  getRedoSize() {
+    return this.redoStack.length
   }
 
   canUndo() {
@@ -247,6 +266,19 @@ export class History
       const key = data.key
       if (key && cell) {
         const value = revert ? data.prev[key] : data.next[key]
+
+        if (data.key === 'attrs') {
+          const hasUndefinedAttr = this.ensureUndefinedAttrs(
+            value,
+            revert ? data.next[key] : data.prev[key],
+          )
+          if (hasUndefinedAttr) {
+            // recognize a `dirty` flag and re-render itself in order to remove
+            // the attribute from SVGElement.
+            options.dirty = true
+          }
+        }
+
         cell.prop(key, value, options)
       }
     } else {
@@ -424,7 +456,7 @@ export class History
       const cmds = this.filterBatchCommand(this.batchCommands)
       if (cmds.length > 0) {
         this.redoStack = []
-        this.undoStack.push(cmds)
+        this.undoStackPush(cmds)
         this.consolidateCommands()
         this.notify('add', cmds, options)
       }
@@ -498,7 +530,7 @@ export class History
       this.lastBatchIndex = Math.max(this.lastBatchIndex, 0)
       this.emit('batch', { cmd, options })
     } else {
-      this.undoStack.push(cmd)
+      this.undoStackPush(cmd)
       this.consolidateCommands()
       this.notify('add', cmd, options)
     }
@@ -560,6 +592,47 @@ export class History
     this.undoStack.pop()
   }
 
+  protected undoStackPush(cmd: History.Commands) {
+    if (this.stackSize === 0) {
+      this.undoStack.push(cmd)
+      return
+    }
+    if (this.undoStack.length >= this.stackSize) {
+      this.undoStack.shift()
+    }
+    this.undoStack.push(cmd)
+  }
+
+  protected ensureUndefinedAttrs(
+    newAttrs: Record<string, any>,
+    oldAttrs: Record<string, any>,
+  ) {
+    let hasUndefinedAttr = false
+    if (
+      newAttrs !== null &&
+      oldAttrs !== null &&
+      typeof newAttrs === 'object' &&
+      typeof oldAttrs === 'object'
+    ) {
+      Object.keys(oldAttrs).forEach((key) => {
+        // eslint-disable-next-line no-prototype-builtins
+        if (newAttrs[key] === undefined && oldAttrs[key] !== undefined) {
+          newAttrs[key] = undefined
+          hasUndefinedAttr = true
+        } else if (
+          typeof newAttrs[key] === 'object' &&
+          typeof oldAttrs[key] === 'object'
+        ) {
+          hasUndefinedAttr = this.ensureUndefinedAttrs(
+            newAttrs[key],
+            oldAttrs[key],
+          )
+        }
+      })
+    }
+    return hasUndefinedAttr
+  }
+
   @Basecoat.dispose()
   dispose() {
     this.validator.dispose()
@@ -614,7 +687,9 @@ export namespace History {
     cancelInvalid?: boolean
   }
 
-  export interface Options extends Partial<CommonOptions> {}
+  export interface Options extends Partial<CommonOptions> {
+    stackSize?: number
+  }
 
   interface Data {
     id?: string
@@ -830,6 +905,7 @@ namespace Util {
       : reservedNames
 
     return {
+      enabled: true,
       ...options,
       eventNames,
       applyOptionsList: options.applyOptionsList || ['propertyPath'],

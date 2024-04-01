@@ -2,14 +2,14 @@ import { Disposable, Graph } from '@antv/x6'
 import { KeyboardImpl } from './keyboard'
 import './api'
 
-export class Keyboard extends Disposable {
-  private keyboardImpl: KeyboardImpl
+export class Keyboard extends Disposable implements Graph.Plugin {
   public name = 'keyboard'
+  private keyboardImpl: KeyboardImpl
   public options: KeyboardImpl.Options
 
-  constructor(options: KeyboardImpl.Options) {
+  constructor(options: KeyboardImpl.Options = {}) {
     super()
-    this.options = options
+    this.options = { enabled: true, ...options }
   }
 
   init(graph: Graph) {
@@ -27,12 +27,10 @@ export class Keyboard extends Disposable {
 
   enable() {
     this.keyboardImpl.enable()
-    return this
   }
 
   disable() {
     this.keyboardImpl.disable()
-    return this
   }
 
   toggleEnabled(enabled?: boolean) {
@@ -58,6 +56,16 @@ export class Keyboard extends Disposable {
     action?: KeyboardImpl.Action,
   ) {
     this.keyboardImpl.on(keys, callback, action)
+    return this
+  }
+
+  trigger(key: string, action?: KeyboardImpl.Action) {
+    this.keyboardImpl.trigger(key, action)
+    return this
+  }
+
+  clear() {
+    this.keyboardImpl.clear()
     return this
   }
 

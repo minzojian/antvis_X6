@@ -1,6 +1,6 @@
 ---
-title: 业务场景
-order: 10
+title: 使用场景
+order: 1
 redirect_from:
   - /zh/examples/practices
 ---

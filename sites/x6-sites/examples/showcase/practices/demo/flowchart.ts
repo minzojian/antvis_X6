@@ -1,4 +1,11 @@
-import { Graph, Shape, Addon } from '@antv/x6'
+import { Graph, Shape } from '@antv/x6'
+import { Stencil } from '@antv/x6-plugin-stencil'
+import { Transform } from '@antv/x6-plugin-transform'
+import { Selection } from '@antv/x6-plugin-selection'
+import { Snapline } from '@antv/x6-plugin-snapline'
+import { Keyboard } from '@antv/x6-plugin-keyboard'
+import { Clipboard } from '@antv/x6-plugin-clipboard'
+import { History } from '@antv/x6-plugin-history'
 import insertCss from 'insert-css'
 
 // 为了协助代码演示
@@ -16,12 +23,7 @@ const graph = new Graph({
     maxScale: 3,
   },
   connecting: {
-    router: {
-      name: 'manhattan',
-      args: {
-        padding: 1,
-      },
-    },
+    router: 'manhattan',
     connector: {
       name: 'rounded',
       args: {
@@ -65,21 +67,31 @@ const graph = new Graph({
       },
     },
   },
-  resizing: true,
-  rotating: true,
-  selecting: {
-    enabled: true,
-    rubberband: true,
-    showNodeSelectionBox: true,
-  },
-  snapline: true,
-  keyboard: true,
-  clipboard: true,
 })
 // #endregion
 
+// #region 使用插件
+graph
+  .use(
+    new Transform({
+      resizing: true,
+      rotating: true,
+    }),
+  )
+  .use(
+    new Selection({
+      rubberband: true,
+      showNodeSelectionBox: true,
+    }),
+  )
+  .use(new Snapline())
+  .use(new Keyboard())
+  .use(new Clipboard())
+  .use(new History())
+// #endregion
+
 // #region 初始化 stencil
-const stencil = new Addon.Stencil({
+const stencil = new Stencil({
   title: '流程图',
   target: graph,
   stencilGraphWidth: 200,
@@ -109,7 +121,6 @@ document.getElementById('stencil')!.appendChild(stencil.container)
 // #endregion
 
 // #region 快捷键与事件
-// copy cut paste
 graph.bindKey(['meta+c', 'ctrl+c'], () => {
   const cells = graph.getSelectedCells()
   if (cells.length) {
@@ -133,16 +144,16 @@ graph.bindKey(['meta+v', 'ctrl+v'], () => {
   return false
 })
 
-//undo redo
+// undo redo
 graph.bindKey(['meta+z', 'ctrl+z'], () => {
-  if (graph.history.canUndo()) {
-    graph.history.undo()
+  if (graph.canUndo()) {
+    graph.undo()
   }
   return false
 })
 graph.bindKey(['meta+shift+z', 'ctrl+shift+z'], () => {
-  if (graph.history.canRedo()) {
-    graph.history.redo()
+  if (graph.canRedo()) {
+    graph.redo()
   }
   return false
 })
@@ -155,7 +166,7 @@ graph.bindKey(['meta+a', 'ctrl+a'], () => {
   }
 })
 
-//delete
+// delete
 graph.bindKey('backspace', () => {
   const cells = graph.getSelectedCells()
   if (cells.length) {
@@ -179,7 +190,7 @@ graph.bindKey(['ctrl+2', 'meta+2'], () => {
 
 // 控制连接桩显示/隐藏
 const showPorts = (ports: NodeListOf<SVGElement>, show: boolean) => {
-  for (let i = 0, len = ports.length; i < len; i = i + 1) {
+  for (let i = 0, len = ports.length; i < len; i += 1) {
     ports[i].style.visibility = show ? 'visible' : 'hidden'
   }
 }

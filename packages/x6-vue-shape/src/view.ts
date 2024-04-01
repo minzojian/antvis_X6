@@ -8,7 +8,7 @@ export class VueShapeView extends NodeView<VueShape> {
   private vm: any
 
   getComponentContainer() {
-    return this.selectors.foContent as HTMLDivElement
+    return this.selectors && (this.selectors.foContent as HTMLDivElement)
   }
 
   confirmUpdate(flag: number) {
@@ -26,6 +26,7 @@ export class VueShapeView extends NodeView<VueShape> {
     this.unmountVueComponent()
     const root = this.getComponentContainer()
     const node = this.cell
+    const graph = this.graph
 
     if (root) {
       const { component } = shapeMaps[node.shape]
@@ -35,25 +36,27 @@ export class VueShapeView extends NodeView<VueShape> {
           this.vm = new Vue({
             el: root,
             render(h: any) {
-              return h(component)
+              return h(component, { node, graph })
             },
             provide() {
               return {
                 getNode: () => node,
+                getGraph: () => graph,
               }
             },
           })
         } else if (isVue3) {
           if (isActive()) {
-            connect(this.targetId(), component, root, node)
+            connect(this.targetId(), component, root, node, graph)
           } else {
             this.vm = createApp({
               render() {
-                return h(component)
+                return h(component, { node, graph })
               },
               provide() {
                 return {
                   getNode: () => node,
+                  getGraph: () => graph,
                 }
               },
             })
@@ -71,7 +74,9 @@ export class VueShapeView extends NodeView<VueShape> {
       isVue3 && this.vm.unmount()
       this.vm = null
     }
-    root.innerHTML = ''
+    if (root) {
+      root.innerHTML = ''
+    }
     return root
   }
 

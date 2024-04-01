@@ -1,4 +1,4 @@
-import { Graph, Cell, Node, Color, Dom } from '@antv/x6'
+import { Graph, Cell, Node, Dom } from '@antv/x6'
 import dagre from 'dagre'
 import insertCss from 'insert-css'
 
@@ -199,14 +199,12 @@ function setup() {
       'New Employee',
       Math.random() < 0.5 ? male : female,
     )
-    graph.freeze()
     graph.addCell([member, createEdge(node, member)])
     layout()
   })
 
   graph.on('node:delete', ({ e, node }) => {
     e.stopPropagation()
-    graph.freeze()
     graph.removeCell(node)
     layout()
   })
@@ -234,10 +232,8 @@ function layout() {
 
   dagre.layout(g)
 
-  graph.freeze()
-
   g.nodes().forEach((id) => {
-    const node = graph.getCell(id) as Node
+    const node = graph.getCellById(id) as Node
     if (node) {
       const pos = g.node(id)
       node.position(pos.x, pos.y)
@@ -249,8 +245,6 @@ function layout() {
     const target = edge.getTargetNode()!
     const sourceBBox = source.getBBox()
     const targetBBox = target.getBBox()
-
-    console.log(sourceBBox, targetBBox)
 
     if ((dir === 'LR' || dir === 'RL') && sourceBBox.y !== targetBBox.y) {
       const gap =
@@ -281,8 +275,6 @@ function layout() {
       edge.setVertices([])
     }
   })
-
-  graph.unfreeze()
 }
 
 function createNode(rank: string, name: string, image: string) {

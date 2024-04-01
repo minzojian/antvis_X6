@@ -6,6 +6,7 @@ export class PanningManager extends Base {
   private clientX: number
   private clientY: number
   private mousewheelHandle: Dom.MouseWheelHandle
+  private isSpaceKeyPressed: boolean
 
   protected get widgetOptions() {
     return this.options.panning
@@ -16,69 +17,53 @@ export class PanningManager extends Base {
   }
 
   protected init() {
+    this.onRightMouseDown = this.onRightMouseDown.bind(this)
+    this.onSpaceKeyDown = this.onSpaceKeyDown.bind(this)
+    this.onSpaceKeyUp = this.onSpaceKeyUp.bind(this)
     this.startListening()
     this.updateClassName()
   }
 
   protected startListening() {
-    const eventTypes = this.widgetOptions.eventTypes
-    if (!eventTypes) {
-      return
-    }
-    if (eventTypes.includes('leftMouseDown')) {
-      this.graph.on('blank:mousedown', this.preparePanning, this)
-      this.graph.on('node:unhandled:mousedown', this.preparePanning, this)
-      this.graph.on('edge:unhandled:mousedown', this.preparePanning, this)
-    }
-    if (eventTypes.includes('rightMouseDown')) {
-      this.onRightMouseDown = this.onRightMouseDown.bind(this)
-      Dom.Event.on(this.graph.container, 'mousedown', this.onRightMouseDown)
-    }
-    if (eventTypes.includes('mouseWheel')) {
-      this.mousewheelHandle = new Dom.MouseWheelHandle(
-        this.graph.container,
-        this.onMouseWheel.bind(this),
-        this.allowMouseWheel.bind(this),
-      )
-      this.mousewheelHandle.enable()
-    }
+    this.graph.on('blank:mousedown', this.onMouseDown, this)
+    this.graph.on('node:unhandled:mousedown', this.onMouseDown, this)
+    this.graph.on('edge:unhandled:mousedown', this.onMouseDown, this)
+    Dom.Event.on(this.graph.container, 'mousedown', this.onRightMouseDown)
+    Dom.Event.on(document.body, {
+      keydown: this.onSpaceKeyDown,
+      keyup: this.onSpaceKeyUp,
+    })
+    this.mousewheelHandle = new Dom.MouseWheelHandle(
+      this.graph.container,
+      this.onMouseWheel.bind(this),
+      this.allowMouseWheel.bind(this),
+    )
+    this.mousewheelHandle.enable()
   }
 
   protected stopListening() {
-    const eventTypes = this.widgetOptions.eventTypes
-    if (!eventTypes) {
-      return
-    }
-    if (eventTypes.includes('leftMouseDown')) {
-      this.graph.off('blank:mousedown', this.preparePanning, this)
-      this.graph.off('node:unhandled:mousedown', this.preparePanning, this)
-      this.graph.off('edge:unhandled:mousedown', this.preparePanning, this)
-    }
-    if (eventTypes.includes('rightMouseDown')) {
-      Dom.Event.off(this.graph.container, 'mousedown', this.onRightMouseDown)
-    }
-    if (eventTypes.includes('mouseWheel')) {
-      if (this.mousewheelHandle) {
-        this.mousewheelHandle.disable()
-      }
-    }
-  }
-
-  protected preparePanning({ e }: { e: Dom.MouseDownEvent }) {
-    const selection = this.graph.getPlugin<any>('selection')
-    const allowRubberband = selection && selection.allowRubberband(e, true)
-    if (
-      this.allowPanning(e, true) ||
-      (this.allowPanning(e) && !allowRubberband)
-    ) {
-      this.startPanning(e)
+    this.graph.off('blank:mousedown', this.onMouseDown, this)
+    this.graph.off('node:unhandled:mousedown', this.onMouseDown, this)
+    this.graph.off('edge:unhandled:mousedown', this.onMouseDown, this)
+    Dom.Event.off(this.graph.container, 'mousedown', this.onRightMouseDown)
+    Dom.Event.off(document.body, {
+      keydown: this.onSpaceKeyDown,
+      keyup: this.onSpaceKeyUp,
+    })
+    if (this.mousewheelHandle) {
+      this.mousewheelHandle.disable()
     }
   }
 
   allowPanning(e: Dom.MouseDownEvent, strict?: boolean) {
+    ;(e as any).spaceKey = this.isSpaceKeyPressed
     return (
       this.pannable &&
-      ModifierKey.isMatch(e, this.widgetOptions.modifiers, strict)
+      ModifierKey.isMatch(
+        e,
+        this.widgetOptions.modifiers as ModifierKey,
+        strict,
+      )
     )
   }
 
@@ -131,20 +116,59 @@ export class PanningManager extends Base {
     }
   }
 
-  protected onRightMouseDown(e: Dom.MouseDownEvent) {
-    if (e.button === 2 && this.allowPanning(e, true)) {
+  protected onMouseDown({ e }: { e: Dom.MouseDownEvent }) {
+    if (!this.allowBlankMouseDown(e)) {
+      return
+    }
+
+    const selection = this.graph.getPlugin<any>('selection')
+    const allowRubberband = selection && selection.allowRubberband(e, true)
+    if (
+      this.allowPanning(e, true) ||
+      (this.allowPanning(e) && !allowRubberband)
+    ) {
       this.startPanning(e)
     }
   }
 
-  protected allowMouseWheel(e: WheelEvent) {
-    return this.pannable && !e.ctrlKey
+  protected onRightMouseDown(e: Dom.MouseDownEvent) {
+    const eventTypes = this.widgetOptions.eventTypes
+    if (!(eventTypes?.includes('rightMouseDown') && e.button === 2)) {
+      return
+    }
+    if (this.allowPanning(e, true)) {
+      this.startPanning(e)
+    }
   }
 
   protected onMouseWheel(e: WheelEvent, deltaX: number, deltaY: number) {
-    if (!e.ctrlKey) {
-      this.graph.translateBy(-deltaX, -deltaY)
+    this.graph.translateBy(-deltaX, -deltaY)
+  }
+
+  protected onSpaceKeyDown(e: Dom.KeyDownEvent) {
+    if (e.which === 32) {
+      this.isSpaceKeyPressed = true
     }
+  }
+  protected onSpaceKeyUp(e: Dom.KeyUpEvent) {
+    if (e.which === 32) {
+      this.isSpaceKeyPressed = false
+    }
+  }
+  protected allowBlankMouseDown(e: Dom.MouseDownEvent) {
+    const eventTypes = this.widgetOptions.eventTypes
+    return (
+      (eventTypes?.includes('leftMouseDown') && e.button === 0) ||
+      (eventTypes?.includes('mouseWheelDown') && e.button === 1)
+    )
+  }
+
+  protected allowMouseWheel(e: WheelEvent) {
+    return (
+      this.pannable &&
+      !e.ctrlKey &&
+      this.widgetOptions.eventTypes?.includes('mouseWheel')
+    )
   }
 
   autoPanning(x: number, y: number) {
@@ -195,10 +219,14 @@ export class PanningManager extends Base {
 }
 
 export namespace PanningManager {
-  type EventType = 'leftMouseDown' | 'rightMouseDown' | 'mouseWheel'
+  type EventType =
+    | 'leftMouseDown'
+    | 'rightMouseDown'
+    | 'mouseWheel'
+    | 'mouseWheelDown'
   export interface Options {
     enabled?: boolean
-    modifiers?: string | ModifierKey[] | null
+    modifiers?: string | Array<ModifierKey | 'space'> | null
     eventTypes?: EventType[]
   }
 }

@@ -1,7 +1,8 @@
 import React from 'react'
-import { Graph, Node, Path, Cell } from '@antv/x6'
+import { Graph, Path, Cell } from '@antv/x6'
+import { Selection } from '@antv/x6-plugin-selection'
 import insertCss from 'insert-css'
-import '@antv/x6-react-shape'
+import { register } from '@antv/x6-react-shape'
 
 interface NodeStatus {
   id: string
@@ -19,74 +20,58 @@ const image = {
     'https://gw.alipayobjects.com/mdn/rms_43231b/afts/img/A*t8fURKfgSOgAAAAAAAAAAAAAARQnAQ',
 }
 
-export class AlgoNode extends React.Component<{ node?: Node }> {
-  shouldComponentUpdate() {
-    const { node } = this.props
-    if (node) {
-      if (node.hasChanged('data')) {
-        return true
-      }
-    }
-    return false
-  }
+const AlgoNode = (props) => {
+  const { node } = props
+  const data = node?.getData() as NodeStatus
+  const { label, status = 'default' } = data
 
-  render() {
-    const { node } = this.props
-    const data = node?.getData() as NodeStatus
-    const { label, status = 'default' } = data
-
-    return (
-      <div className={`node ${status}`}>
-        <img src={image.logo} />
-        <span className="label">{label}</span>
-        <span className="status">
-          {status === 'success' && <img src={image.success} />}
-          {status === 'failed' && <img src={image.failed} />}
-          {status === 'running' && <img src={image.running} />}
-        </span>
-      </div>
-    )
-  }
+  return (
+    <div className={`node ${status}`}>
+      <img src={image.logo} alt="logo" />
+      <span className="label">{label}</span>
+      <span className="status">
+        {status === 'success' && <img src={image.success} alt="success" />}
+        {status === 'failed' && <img src={image.failed} alt="failed" />}
+        {status === 'running' && <img src={image.running} alt="running" />}
+      </span>
+    </div>
+  )
 }
 
-Graph.registerNode(
-  'dag-node',
-  {
-    inherit: 'react-shape',
-    width: 180,
-    height: 36,
-    component: <AlgoNode />,
-    ports: {
-      groups: {
-        top: {
-          position: 'top',
-          attrs: {
-            circle: {
-              r: 4,
-              magnet: true,
-              stroke: '#C2C8D5',
-              strokeWidth: 1,
-              fill: '#fff',
-            },
+register({
+  shape: 'dag-node',
+  width: 180,
+  height: 36,
+  component: AlgoNode,
+  ports: {
+    groups: {
+      top: {
+        position: 'top',
+        attrs: {
+          circle: {
+            r: 4,
+            magnet: true,
+            stroke: '#C2C8D5',
+            strokeWidth: 1,
+            fill: '#fff',
           },
         },
-        bottom: {
-          position: 'bottom',
-          attrs: {
-            circle: {
-              r: 4,
-              magnet: true,
-              stroke: '#C2C8D5',
-              strokeWidth: 1,
-              fill: '#fff',
-            },
+      },
+      bottom: {
+        position: 'bottom',
+        attrs: {
+          circle: {
+            r: 4,
+            magnet: true,
+            stroke: '#C2C8D5',
+            strokeWidth: 1,
+            fill: '#fff',
           },
         },
       },
     },
   },
-  true,
-)
+})
 
 Graph.registerEdge(
   'dag-edge',
@@ -247,15 +232,16 @@ const graph: Graph = new Graph({
       })
     },
   },
-  selecting: {
-    enabled: true,
+})
+graph.use(
+  new Selection({
     multiple: true,
     rubberEdge: true,
     rubberNode: true,
     modifiers: 'shift',
     rubberband: true,
-  },
-})
+  }),
+)
 
 graph.on('edge:connected', ({ edge }) => {
   edge.attr({
@@ -301,7 +287,7 @@ const showNodeStatus = async (statusList: NodeStatus[][]) => {
     const data = node.getData() as NodeStatus
     node.setData({
       ...data,
-      status: status,
+      status,
     })
   })
   setTimeout(() => {
@@ -309,7 +295,7 @@ const showNodeStatus = async (statusList: NodeStatus[][]) => {
   }, 3000)
 }
 
-fetch('../data/dag.json')
+fetch('/data/dag.json')
   .then((response) => response.json())
   .then((data) => {
     init(data)

@@ -3,7 +3,6 @@ import {
   ModifierKey,
   CssLoader,
   Dom,
-  ObjectExt,
   Cell,
   EventArgs,
   Graph,
@@ -12,33 +11,42 @@ import { SelectionImpl } from './selection'
 import { content } from './style/raw'
 import './api'
 
-export class Selection extends Basecoat<SelectionImpl.EventArgs> {
+export class Selection
+  extends Basecoat<SelectionImpl.EventArgs>
+  implements Graph.Plugin
+{
+  public name = 'selection'
+
   private graph: Graph
   private selectionImpl: SelectionImpl
   private readonly options: Selection.Options
   private movedMap = new WeakMap<Cell, boolean>()
   private unselectMap = new WeakMap<Cell, boolean>()
-  public name = 'selection'
 
-  private get rubberbandDisabled() {
+  get rubberbandDisabled() {
     return this.options.enabled !== true || this.options.rubberband !== true
   }
 
-  public get disabled() {
+  get disabled() {
     return this.options.enabled !== true
   }
 
-  public get length() {
+  get length() {
     return this.selectionImpl.length
   }
 
-  public get cells() {
+  get cells() {
     return this.selectionImpl.cells
   }
 
-  constructor(options: Selection.Options) {
+  constructor(options: Selection.Options = {}) {
     super()
-    this.options = ObjectExt.merge({}, Selection.defaultOptions, options)
+    this.options = {
+      enabled: true,
+      ...Selection.defaultOptions,
+      ...options,
+    }
+
     CssLoader.ensure(this.name, content)
   }
 
@@ -62,14 +70,12 @@ export class Selection extends Basecoat<SelectionImpl.EventArgs> {
     if (this.disabled) {
       this.options.enabled = true
     }
-    return this
   }
 
   disable() {
     if (!this.disabled) {
       this.options.enabled = false
     }
-    return this
   }
 
   toggleEnabled(enabled?: boolean) {
@@ -314,6 +320,10 @@ export class Selection extends Basecoat<SelectionImpl.EventArgs> {
   }
 
   protected onBlankMouseDown({ e }: EventArgs['blank:mousedown']) {
+    if (!this.allowBlankMouseDown(e)) {
+      return
+    }
+
     const allowGraphPanning = this.graph.panning.allowPanning(e, true)
     const scroller = this.graph.getPlugin<any>('scroller')
     const allowScrollerPanning = scroller && scroller.allowPanning(e, true)
@@ -323,6 +333,14 @@ export class Selection extends Basecoat<SelectionImpl.EventArgs> {
     ) {
       this.startRubberband(e)
     }
+  }
+
+  protected allowBlankMouseDown(e: Dom.MouseDownEvent) {
+    const eventTypes = this.options.eventTypes
+    return (
+      (eventTypes?.includes('leftMouseDown') && e.button === 0) ||
+      (eventTypes?.includes('mouseWheelDown') && e.button === 1)
+    )
   }
 
   protected onBlankClick() {
@@ -469,5 +487,6 @@ export namespace Selection {
     selectEdgeOnMoved: false,
     following: true,
     content: null,
+    eventTypes: ['leftMouseDown', 'mouseWheelDown'],
   }
 }

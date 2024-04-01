@@ -165,7 +165,7 @@ const addEdges = (edges: ElkEdge[], pos?: Position) => {
   })
 }
 
-fetch('../data/elkdata.json')
+fetch('/data/elkdata.json')
   .then((response) => response.json())
   .then((data) => {
     elk.layout(data).then((res) => {

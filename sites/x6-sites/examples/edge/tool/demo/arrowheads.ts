@@ -61,12 +61,12 @@ const graph = new Graph({
     },
 
     validateConnection({ sourceMagnet, targetMagnet }) {
-      // 只能从输出链接桩创建连接
+      // 只能从输出连接桩创建连接
       if (!sourceMagnet || sourceMagnet.getAttribute('port-group') === 'in') {
         return false
       }
 
-      // 只能连接到输入链接桩
+      // 只能连接到输入连接桩
       if (!targetMagnet || targetMagnet.getAttribute('port-group') !== 'in') {
         return false
       }

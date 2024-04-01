@@ -1,16 +1,17 @@
-import React, { ReactPortal, version as reactVersion } from 'react'
-import ReactDOM, { createPortal } from 'react-dom'
-import type { Root, createRoot as CreateRoot } from 'react-dom/client'
+import React, { ReactPortal } from 'react'
+import { createPortal } from 'react-dom'
+import { createRoot, Root } from 'react-dom/client'
 import { Dom, NodeView } from '@antv/x6'
 import { ReactShape } from './node'
 import { Portal } from './portal'
 import { Wrap } from './wrap'
 
-const [, major] = /^(\d+)\.\d+\.\d+$/.exec(reactVersion)!
-const reactMajor = Number(major)
-const isPreEighteen = reactMajor < 18
 export class ReactShapeView extends NodeView<ReactShape> {
   root?: Root
+
+  protected targetId() {
+    return `${this.graph.view.cid}:${this.cell.id}`
+  }
 
   getComponentContainer() {
     return this.selectors && (this.selectors.foContent as HTMLDivElement)
@@ -29,36 +30,22 @@ export class ReactShapeView extends NodeView<ReactShape> {
     const node = this.cell
 
     if (container) {
-      const graph = node.model ? node.model.graph : null
-      // Actually in the dnd plugin, this graph is empty,
-      // in order to make the external perception type of graph is a graph, rather than graph | null, so hack this.
-      const elem = React.createElement(Wrap, { node, graph: graph! })
+      const elem = React.createElement(Wrap, { node, graph: this.graph })
       if (Portal.isActive()) {
-        const portal = createPortal(elem, container) as ReactPortal
-        Portal.connect(this.cell.id, portal)
+        const portal = createPortal(elem, container, node.id) as ReactPortal
+        Portal.connect(this.targetId(), portal)
       } else {
-        if (isPreEighteen) {
-          ReactDOM.render(elem, container)
-        } else {
-          // eslint-disable-next-line
-          const createRoot = require('react-dom/client')
-            .createRoot as typeof CreateRoot
-          this.root = createRoot(container)
-          this.root.render(elem)
-        }
+        this.root = createRoot(container)
+        this.root.render(elem)
       }
     }
   }
 
   protected unmountReactComponent() {
     const container = this.getComponentContainer()
-    if (container) {
-      if (isPreEighteen) {
-        ReactDOM.unmountComponentAtNode(container)
-      } else if (this.root) {
-        this.root.unmount()
-        this.root = undefined
-      }
+    if (container && this.root) {
+      this.root.unmount()
+      this.root = undefined
     }
   }
 
@@ -88,7 +75,7 @@ export class ReactShapeView extends NodeView<ReactShape> {
 
   unmount() {
     if (Portal.isActive()) {
-      Portal.disconnect(this.cell.id)
+      Portal.disconnect(this.targetId())
     }
     this.unmountReactComponent()
     super.unmount()

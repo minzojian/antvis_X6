@@ -265,6 +265,32 @@ function findRoute(
   return null
 }
 
+function snap(vertices: Point[], gridSize = 10) {
+  if (vertices.length <= 1) {
+    return vertices
+  }
+
+  for (let i = 0, len = vertices.length; i < len - 1; i += 1) {
+    const first = vertices[i]
+    const second = vertices[i + 1]
+    if (first.x === second.x) {
+      const x = gridSize * Math.round(first.x / gridSize)
+      if (first.x !== x) {
+        first.x = x
+        second.x = x
+      }
+    } else if (first.y === second.y) {
+      const y = gridSize * Math.round(first.y / gridSize)
+      if (first.y !== y) {
+        first.y = y
+        second.y = y
+      }
+    }
+  }
+
+  return vertices
+}
+
 export const router: Router.Definition<ManhattanRouterOptions> = function (
   vertices,
   optionsRaw,
@@ -348,6 +374,10 @@ export const router: Router.Definition<ManhattanRouterOptions> = function (
     // Save tailPoint for next iteration
     tailPoint = partialRoute[partialRoute.length - 1] || tailPoint
     newVertices.push(...partialRoute)
+  }
+
+  if (options.snapToGrid) {
+    return snap(newVertices, edgeView.graph.grid.getGridSize())
   }
 
   return newVertices

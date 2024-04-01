@@ -6,55 +6,67 @@ redirect_from:
   - /zh/docs/tutorial
 ---
 
-X6 是 AntV 旗下的图编辑引擎，提供了一系列开箱即用的交互组件和简单易用的节点定制能力，方便我们快速搭建流程图、DAG 图、ER 图等图应用。
+X6 是基于 HTML 和 SVG 的图编辑引擎，提供低成本的定制能力和开箱即用的内置扩展，方便我们快速搭建 DAG 图、ER 图、流程图、血缘图等应用。
 
-如果你还没有使用过 X6， 建议通过 [快速上手](getting-started) 抢先体验 X6 的魅力。
+如果你还没有使用过 X6， 建议通过 [快速上手](/zh/docs/tutorial/getting-started) 抢先体验 X6 的魅力。
 
-[![MIT License](https://img.shields.io/badge/license-MIT_License-green.svg?style=flat-square)](https://github.com/antvis/x6/blob/master/LICENSE)
-[![Language](https://img.shields.io/badge/language-typescript-blue.svg?style=flat-square)](https://www.typescriptlang.org)
-[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat-square)](https://github.com/antvis/x6/pulls)
+<p align="left">
+<a href="https://github.com/antvis/X6/actions/workflows/ci.yml"><img alt="build" src="https://img.shields.io/github/actions/workflow/status/antvis/x6/ci.yml?branch=master&logo=github&style=flat-square" /></a>
+<a href="https://www.npmjs.com/package/@antv/x6"><img alt="NPM Package" src="https://img.shields.io/npm/v/@antv/x6.svg?style=flat-square" /></a>
+<a href="https://www.npmjs.com/package/@antv/x6"><img alt="NPM Downloads" src="https://img.shields.io/npm/dm/@antv/x6?logo=npm&style=flat-square" /></a>
+</p>
 
-[![build](https://img.shields.io/travis/antvis/x6.svg?style=flat-square)](https://travis-ci.org/antvis/x6)
-[![coverage](https://img.shields.io/coveralls/antvis/x6/master.svg?style=flat-square)](https://coveralls.io/github/antvis/x6)
-[![Language grade: JavaScript](https://img.shields.io/lgtm/grade/javascript/g/antvis/x6.svg?logo=lgtm&style=flat-square)](https://lgtm.com/projects/g/antvis/x6/context:javascript)
-
-[![NPM Package](https://img.shields.io/npm/v/@antv/x6.svg?style=flat-square)](https://www.npmjs.com/package/@antv/x6)
-[![NPM Downloads](https://img.shields.io/npm/dm/@antv/x6.svg?style=flat-square)](https://www.npmjs.com/package/@antv/x6)
-[![NPM Dependencies](https://img.shields.io/david/antvis/x6?path=packages%2Fx6&style=flat-square)](https://www.npmjs.com/package/@antv/x6)
+<p align="left">
+<a href="/LICENSE"><img src="https://img.shields.io/github/license/antvis/x6?style=flat-square" alt="MIT License" /></a>
+<a href="https://www.typescriptlang.org"><img alt="Language" src="https://img.shields.io/badge/language-TypeScript-blue.svg?style=flat-square" /></a>
+<a href="https://github.com/antvis/x6/pulls"><img alt="PRs Welcome" src="https://img.shields.io/badge/PRs-Welcome-brightgreen.svg?style=flat-square" /></a>
+<a href="https://x6.antv.antgroup.com"><img alt="website" src="https://img.shields.io/static/v1?label=&labelColor=505050&message=website&color=0076D6&style=flat-square&logo=google-chrome&logoColor=0076D6" /></a>
+</p>
 
 ## ✨ 特性
 
-- 🌱　极易定制：支持使用 SVG/HTML/React/Vue 定制节点样式和交互；
-- 🚀　开箱即用：内置 10+ 图编辑配套扩展，如框选、对齐线、小地图等；
-- 🧲　数据驱动：基于 MVC 架构，用户更加专注于数据逻辑和业务逻辑；
-- 💯　事件驱动：可以监听图表内发生的任何事件。
+- 🌱 　极易定制：支持使用 SVG/HTML/React/Vue 定制节点样式和交互；
+- 🚀 　开箱即用：内置 10+ 图编辑配套扩展，如框选、对齐线、小地图等；
+- 🧲 　数据驱动：基于 MVC 架构，用户更加专注于数据逻辑和业务逻辑；
+- 💯 　事件驱动：可以监听图表内发生的任何事件。
 
 ## 🍉 使用文档
 
-- [快速上手](getting-started)
-- [基础教程](basic/graph)
-- [进阶实战](intermediate/serialization)
-- [高级指引](advanced/animation)
-- [更新日志](https://www.yuque.com/antv/x6/xgb04i)
+- [快速上手](/zh/docs/tutorial/getting-started)
+- [基础](/zh/docs/tutorial/basic/graph)
+- [进阶](/zh/docs/tutorial/intermediate/connection-point)
+- [插件](/zh/docs/tutorial/plugins/transform)
+- [API](/zh/docs/api/graph/graph)
 
-## ❤️ 如何流群
+X6 文档整体分为文档和 API 两部分，建议仔细阅读文档内容，会帮助你更好的上手开发，API 文档内容比较多，可以等遇到问题时，通过搜索定位到相关的文档。
 
-欢迎各界 X6 使用者、图可视化爱好者加入 X6 图可视化交流群（钉钉群，使用钉钉扫一扫加入）讨论与交流。
+## ❤️ 如何交流
 
-<a href="https://qr.dingtalk.com/action/joingroup?code=v1,k1,rOHuvgq5s0EHDktyyQJffDE3ZAmHnbB2e6iwn/w4BKs=&_dt_no_comment=1&origin=11" target="_blank" rel="noopener noreferrer">
-  <img src="https://gw.alipayobjects.com/mdn/rms_43231b/afts/img/A*nFa5TaWsSOoAAAAAAAAAAAAAARQnAQ" alt="X6 图可视化交流群4" width="375" />
+如果您有任何的问题、建议、反馈或者交流意愿，可以通过如下方式联系我们：
+
+- 官方推荐: [GitHub issues](https://github.com/antvis/X6/issues/new/choose)
+- 邮件：[antv@antfin.com](mailto:antv@antfin.com)
+- 语雀专栏：[https://www.yuque.com/antv/blog](https://www.yuque.com/antv/blog)
+
+<img src="https://mdn.alipayobjects.com/huamei_f4t1bn/afts/img/A*AY2PSL5s0N4AAAAAAAAAAAAADtOHAQ/original" alt="X6 图编辑交流群" width="375" />
+
+## 🤝 参与贡献
+
+### Bugs
+
+如果您在使用的过程中碰到问题，可以先通过 [issues](https://github.com/antvis/x6/issues) 看看有没有类似的 bug 或者建议。在你报告一个 bug 之前，请先确保已经搜索过已有的 issue 和阅读了我们的[常见问题](https://www.yuque.com/antv/x6/tox1ukbz5cw57qfy)。
+
+### 行为准则
+
+我们有一份[行为准则](https://github.com/antvis/X6/blob/master/CONTRIBUTING.zh-CN.md)，希望所有的贡献者都能遵守，请花时间阅读一遍全文以确保你能明白哪些是可以做的，哪些是不可以做的。
+
+### 加入社区
+
+还可以参考下面的贡献指南，一步一步成为 X6 的贡献者吧：
+
+- [如何参与到 X6 开源开发](https://www.yuque.com/antv/x6/gcinvi)
+- [如何优雅地在 github 上贡献代码](https://segmentfault.com/a/1190000000736629?u_atoken=b71f69b7-7d74-4e6c-a373-76e0a36e2c87&u_asession=01aGvG2P10Vrjamv5BFM7yX0X2_OcJ_XmHlitgQC_BVnNLlRLdwpnHYH8ma1b1UKRaX0KNBwm7Lovlpxjd_P_q4JsKWYrT3W_NKPr8w6oU7K93NVUbout2zcDySUWFprtJUe3R9QHfzEvknA4dzJmVTGBkFo3NEHBv0PZUm6pbxQU&u_asig=05FBplinh079EhmRTHTDgrLXp5aawipV_A-9VAsAs841tY8QeTTaaTvFKcH6odRhI4VX2pBdH5ae6FY2MiL2X_4yTqZp2jK-_nBOl2nesFZDM2RmF5JkBT_JWpU60Z6lY1hzgqVxFxj_uE1HnffLBmwa5Sl9NkdZ4_S8RH_A-AooP9JS7q8ZD7Xtz2Ly-b0kmuyAKRFSVJkkdwVUnyHAIJzZMNY1otqX6vcbPyd-A-Ld3WE-pEMt_G6ZtWjng8eWoZH_8T8uYGNepqxdb-gLe1IO3h9VXwMyh6PgyDIVSG1W-dzbV77H9pFSh5eWBVfcZZYGYDqHeX90h_yD6KfDquy8GWlAwW_v4wTa3IAdocwA0iaDksczFnALAG-4HaicdUmWspDxyAEEo4kbsryBKb9Q&u_aref=SU72jL%2FvYl46xrVouxNG%2FiEj5e0%3D)
+
+<a href="https://github.com/antvis/x6/graphs/contributors">
+  <img src="https://raw.githubusercontent.com/antvis/X6/master/CONTRIBUTORS.svg" alt="Contributors" />
 </a>
-
-## 🤝 如何贡献
-
-如果您在使用的过程中碰到问题，可以先通过 [issues](https://github.com/antvis/x6/issues) 看看有没有类似的 bug 或者建议。
-
-如需提交代码，请遵从我们的[贡献指南](https://github.com/antvis/X6/blob/master/CONTRIBUTING.zh-CN.md)。
-
-<a href="https://github.com/antvis/x6/graphs/contributors"  target="_blank" rel="noopener noreferrer">
-  <img src="https://opencollective.com/x6/contributors.svg?width=890&button=false" />
-</a>
-
-## 🔑 开源协议
-
-该项目的代码和文档基于 [MIT License](tps://github.com/antvis/X6/blob/master/LICENSE) 开源协议。

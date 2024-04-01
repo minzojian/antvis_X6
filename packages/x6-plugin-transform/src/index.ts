@@ -3,18 +3,27 @@ import { TransformImpl } from './transform'
 import { content } from './style/raw'
 import './api'
 
-export class Transform extends Basecoat<Transform.EventArgs> {
+export class Transform
+  extends Basecoat<Transform.EventArgs>
+  implements Graph.Plugin
+{
+  public name = 'transform'
+  public options: Transform.Options
   private graph: Graph
   protected widgets: Map<Node, TransformImpl> = new Map()
-  public name = 'transform'
+  private disabled = false
 
-  constructor(public readonly options: Transform.Options) {
+  constructor(options: Transform.Options = {}) {
     super()
+    this.options = options
     CssLoader.ensure(this.name, content)
   }
 
   init(graph: Graph) {
     this.graph = graph
+    if (this.disabled) {
+      return
+    }
     this.startListening()
   }
 
@@ -28,7 +37,25 @@ export class Transform extends Basecoat<Transform.EventArgs> {
     this.graph.off('blank:mousedown', this.onBlankMouseDown, this)
   }
 
-  protected onNodeClick({ node }: EventArgs['node:click']) {
+  enable() {
+    if (this.disabled) {
+      this.disabled = false
+      this.startListening()
+    }
+  }
+
+  disable() {
+    if (!this.disabled) {
+      this.disabled = true
+      this.stopListening()
+    }
+  }
+
+  isEnabled() {
+    return !this.disabled
+  }
+
+  createWidget(node: Node) {
     this.clearWidgets()
     const widget = this.createTransform(node)
     if (widget) {
@@ -38,6 +65,10 @@ export class Transform extends Basecoat<Transform.EventArgs> {
         this.graph.trigger(name, args)
       })
     }
+  }
+
+  protected onNodeClick({ node }: EventArgs['node:click']) {
+    this.createWidget(node)
   }
 
   protected onBlankMouseDown() {
@@ -113,7 +144,7 @@ export class Transform extends Basecoat<Transform.EventArgs> {
     return options
   }
 
-  protected clearWidgets() {
+  clearWidgets() {
     this.widgets.forEach((widget, node) => {
       if (this.graph.getCellById(node.id)) {
         widget.dispose()

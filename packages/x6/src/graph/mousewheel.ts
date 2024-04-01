@@ -50,7 +50,7 @@ export class MouseWheel extends Base {
     const guard = this.widgetOptions.guard
 
     return (
-      (guard == null || guard.call(e)) &&
+      (guard == null || guard(e)) &&
       ModifierKey.isMatch(e, this.widgetOptions.modifiers)
     )
   }
@@ -59,7 +59,7 @@ export class MouseWheel extends Base {
     const guard = this.widgetOptions.guard
 
     if (
-      (guard == null || guard.call(e)) &&
+      (guard == null || guard(e)) &&
       ModifierKey.isMatch(e, this.widgetOptions.modifiers)
     ) {
       const factor = this.widgetOptions.factor || 1.2
@@ -81,6 +81,9 @@ export class MouseWheel extends Base {
           // webkit and to avoid rounding errors for zoom steps
           this.cumulatedFactor =
             Math.round(this.currentScale * factor * 20) / 20 / this.currentScale
+          if (this.cumulatedFactor === 1) {
+            this.cumulatedFactor = 1.05
+          }
         }
       } else {
         // zoomout
@@ -95,6 +98,9 @@ export class MouseWheel extends Base {
             Math.round(this.currentScale * (1 / factor) * 20) /
             20 /
             this.currentScale
+          if (this.cumulatedFactor === 1) {
+            this.cumulatedFactor = 0.95
+          }
         }
       }
 

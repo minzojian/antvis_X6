@@ -9,22 +9,6 @@
       "screenshot": "https://gw.alipayobjects.com/mdn/rms_43231b/afts/img/A*6UGgRb4EkuMAAAAAAAAAAAAAARQnAQ"
     },
     {
-      "filename": "shadow-edge.ts",
-      "title": {
-        "zh": "阴影边",
-        "en": "Shadow Edge"
-      },
-      "screenshot": "https://gw.alipayobjects.com/mdn/rms_43231b/afts/img/A*wlLJRbSOfnkAAAAAAAAAAAAAARQnAQ"
-    },
-    {
-      "filename": "double-edge.ts",
-      "title": {
-        "zh": "双线边",
-        "en": "Double Edge"
-      },
-      "screenshot": "https://gw.alipayobjects.com/mdn/rms_43231b/afts/img/A*oeAZSa0C8ZMAAAAAAAAAAAAAARQnAQ"
-    },
-    {
       "filename": "gradient.ts",
       "title": {
         "zh": "渐变背景色",

@@ -107,7 +107,11 @@ export class TransformImpl extends View<TransformImpl.EventArgs> {
 
   render() {
     this.renderHandles()
-    this.view.addClass(Private.NODE_CLS)
+
+    if (this.view) {
+      this.view.addClass(Private.NODE_CLS)
+    }
+
     Dom.addClass(this.container, this.containerClassName)
     Dom.toggleClass(
       this.container,
@@ -153,7 +157,9 @@ export class TransformImpl extends View<TransformImpl.EventArgs> {
   }
 
   remove() {
-    this.view.removeClass(Private.NODE_CLS)
+    if (this.view) {
+      this.view.removeClass(Private.NODE_CLS)
+    }
     return super.remove()
   }
 
@@ -487,7 +493,7 @@ export class TransformImpl extends View<TransformImpl.EventArgs> {
     Dom.removeClass(this.container, `${this.containerClassName}-active`)
 
     if (this.handle) {
-      Dom.removeClass(this.handle, `${this.containerClassName}-active`)
+      Dom.removeClass(this.handle, `${this.containerClassName}-active-handle`)
 
       const pos = this.handle.getAttribute(
         'data-position',
@@ -551,6 +557,7 @@ export class TransformImpl extends View<TransformImpl.EventArgs> {
 
   @View.dispose()
   dispose() {
+    this.stopListening()
     this.remove()
     this.off()
   }

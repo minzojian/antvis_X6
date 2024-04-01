@@ -1,13 +1,13 @@
 ---
-title: Connector
-order: 18
+title: 连接器
+order: 6
 redirect_from:
   - /zh/docs
   - /zh/docs/api
   - /zh/docs/api/registry
 ---
 
-连接器将起点、路由返回的点、终点加工为 `<path>` 元素的 [`d`](https://developer.mozilla.org/en-US/docs/Web/SVG/Attribute/d) 属性，决定了边渲染到画布后的样式。我们在 `Registry.Connector.presets` 命名空间中提供了以下几种连接器。
+连接器将起点、路由返回的点、终点加工为 `<path>` 元素的 [`d`](https://developer.mozilla.org/en-US/docs/Web/SVG/Attribute/d) 属性，决定了边渲染到画布后的样式。X6 中内置了以下几种连接器。
 
 | 连接器   | 说明                                                                                  |
 |----------|-------------------------------------------------------------------------------------|
@@ -52,7 +52,7 @@ edge.setConnector('rounded', { radius: 20 })
 ```ts
 new Graph({
   connecting: {
-    connector: { 
+    connector: {
       name: 'rounded',
       args: {
         radius: 20,
@@ -74,8 +74,7 @@ new Graph({
 
 下面我们一起来看看如何使用内置连接器，以及如何自定并注册自定义连接器。
 
-
-## presets
+## 内置连接器
 
 ### normal
 
@@ -87,7 +86,7 @@ new Graph({
 |--------|----------|:-------:|---------|-------------------------------------------------------------|
 | raw    | boolean  |    否    | `false` | 是否返回一个 `Path` 对象，默认值为 `false` 返回序列化后的字符串。 |
 
-<iframe src="/demos/api/registry/connector/normal"></iframe>
+<code id="connector-normal" src="@/src/api/connector/normal/index.tsx"></code>
 
 ### smooth
 
@@ -95,10 +94,10 @@ new Graph({
 
 支持的参数如下表：
 
-| 参数名 | 参数类型 | 是否必选 | 默认值  | 参数说明                                                        |
-|--------|----------|:-------:|---------|-------------------------------------------------------------|
-| raw    | boolean  |    否    | `false` | 是否返回一个 `Path` 对象，默认值为 `false` 返回序列化后的字符串。 |
-| direction    | `H` \| `V`  |    否    | - | 保持水平连接或者保持垂直连接，不设置会根据起点和终点位置动态计算。 |
+| 参数名    | 参数类型   | 是否必选 | 默认值  | 参数说明                                                         |
+|-----------|------------|:-------:|---------|--------------------------------------------------------------|
+| raw       | boolean    |    否    | `false` | 是否返回一个 `Path` 对象，默认值为 `false` 返回序列化后的字符串。  |
+| direction | `H` \| `V` |    否    | -       | 保持水平连接或者保持垂直连接，不设置会根据起点和终点位置动态计算。 |
 
 例如：
 
@@ -114,7 +113,7 @@ graph.addEdge({
 })
 ```
 
-<iframe src="/demos/api/registry/connector/smooth"></iframe>
+<code id="connector-smooth" src="@/src/api/connector/smooth/index.tsx"></code>
 
 ### rounded
 
@@ -146,7 +145,7 @@ graph.addEdge({
 })
 ```
 
-<iframe src="/demos/api/registry/connector/rounded"></iframe>
+<code id="connector-rounded" src="@/src/api/connector/rounded/index.tsx"></code>
 
 ### jumpover
 
@@ -161,20 +160,20 @@ graph.addEdge({
 | radius | number                    |    否    | `0`     | 倒角半径。                                                       |
 | raw    | boolean                   |    否    | `false` | 是否返回一个 `Path` 对象，默认值为 `false` 返回序列化后的字符串。 |
 
-<iframe src="/demos/api/registry/connector/jumpover"></iframe>
+<code id="connector-jumpover" src="@/src/api/connector/jumpover/index.tsx"></code>
 
-## registry
+## 自定义连接器
 
 连接器是一个具有如下签名的函数，返回 `Path` 对象或序列化后的字符串。
 
-```sign
+```ts
 export type Definition<T> = (
-  this: EdgeView,                 // 边的视图
-  sourcePoint: Point.PointLike,   // 起点
-  targetPoint: Point.PointLike,   // 终点
+  this: EdgeView, // 边的视图
+  sourcePoint: Point.PointLike, // 起点
+  targetPoint: Point.PointLike, // 终点
   routePoints: Point.PointLike[], // 路由返回的点
-  args: T,                        // 参数
-  edgeView: EdgeView,             // 边的视图
+  args: T, // 参数
+  edgeView: EdgeView, // 边的视图
 ) => Path | string
 ```
 
@@ -187,28 +186,7 @@ export type Definition<T> = (
 | args        | T                 | 连接器参数。   |
 | edgeView    | EdgeView          | 边的视图。     |
 
-并在 `Registry.Connector.registry` 对象上提供了 [`register`](#register) 和 [`unregister`](#unregister) 两个方法来注册和取消注册连接器。
-
-### register
-
-```sign
-register(entities: { [name: string]: Definition }, force?: boolean): void
-register(name: string, entity: Definition, force?: boolean): Definition
-```
-
-注册连接器。
-
-### unregister
-
-```sign
-unregister(name: string): Definition | null
-```
-
-取消注册连接器。
-
-### 自定义连接器
-
-按照上面的规则，我来定义一个 `wobble` 连接器：
+我来定义一个 `wobble` 连接器：
 
 ```ts
 export interface WobbleArgs {
@@ -217,40 +195,40 @@ export interface WobbleArgs {
 }
 
 function wobble(
-  sourcePoint: Point.PointLike, 
-  targetPoint: Point.PointLike, 
-  routePoints: Point.PointLike[], 
+  sourcePoint: Point.PointLike,
+  targetPoint: Point.PointLike,
+  vertices: Point.PointLike[],
   args: WobbleArgs,
 ) {
-    const spread = args.spread || 20
-    const points = [...vertices, targetPoint].map((p) => Point.create(p))
-    let prev = Point.create(sourcePoint)
-    const path = new Path(Path.createSegment('M', prev))
+  const spread = args.spread || 20
+  const points = [...vertices, targetPoint].map((p) => Point.create(p))
+  let prev = Point.create(sourcePoint)
+  const path = new Path(Path.createSegment('M', prev))
 
-    for (let i = 0, n = points.length; i < n; i += 1) {
-      const next = points[i]
-      const distance = prev.distance(next)
-      let d = spread
+  for (let i = 0, n = points.length; i < n; i += 1) {
+    const next = points[i]
+    const distance = prev.distance(next)
+    let d = spread
 
-      while (d < distance) {
-        const current = prev.clone().move(next, -d)
-        current.translate(
-          Math.floor(7 * Math.random()) - 3,
-          Math.floor(7 * Math.random()) - 3,
-        )
-        path.appendSegment(Path.createSegment('L', current))
-        d += spread
-      }
-
-      path.appendSegment(Path.createSegment('L', next))
-      prev = next
+    while (d < distance) {
+      const current = prev.clone().move(next, -d)
+      current.translate(
+        Math.floor(7 * Math.random()) - 3,
+        Math.floor(7 * Math.random()) - 3,
+      )
+      path.appendSegment(Path.createSegment('L', current))
+      d += spread
     }
 
-    return args.raw ? path : path.serialize()
+    path.appendSegment(Path.createSegment('L', next))
+    prev = next
+  }
+
+  return args.raw ? path : path.serialize()
 }
 ```
 
-实际上，我们将 `Registry.Connector.registry`  对象的 `register` 和 `unregister` 方法分别挂载为 `Graph` 的两个静态方法 `Graph.registerConnector` 和 `Graph.unregisterConnector`，所以我们可以像下面这样来注册连接器：
+然后注册连接器：
 
 ```ts
 Graph.registerConnector('wobble', wobble)
@@ -261,5 +239,4 @@ Graph.registerConnector('wobble', wobble)
 ```ts
 edge.setConnector('wobble', { spread: 16 })
 ```
-
-<iframe src="/demos/api/registry/connector/wobble"></iframe>
+<code id="connector-wobble" src="@/src/api/connector/wobble/index.tsx"></code>

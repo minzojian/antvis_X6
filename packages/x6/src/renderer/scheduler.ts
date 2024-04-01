@@ -1,4 +1,4 @@
-import { KeyValue, Dom, Disposable } from '@antv/x6-common'
+import { KeyValue, Dom, Disposable, FunctionExt } from '@antv/x6-common'
 import { Rectangle } from '@antv/x6-geometry'
 import { Model, Cell } from '../model'
 import { View, CellView, NodeView, EdgeView } from '../view'
@@ -8,6 +8,7 @@ import { Graph } from '../graph'
 
 export class Scheduler extends Disposable {
   public views: KeyValue<Scheduler.View> = {}
+  public willRemoveViews: KeyValue<Scheduler.View> = {}
   protected zPivots: KeyValue<Comment>
   private graph: Graph
   private renderArea?: Rectangle
@@ -30,6 +31,7 @@ export class Scheduler extends Disposable {
 
   protected init() {
     this.startListening()
+    this.renderViews(this.model.getCells())
   }
 
   protected startListening() {
@@ -51,20 +53,17 @@ export class Scheduler extends Disposable {
   protected onModelReseted({ options }: Model.EventArgs['reseted']) {
     this.queue.clearJobs()
     this.removeZPivots()
-    this.removeViews()
-    this.renderViews(this.model.getCells(), options)
+    this.resetViews()
+    const cells = this.model.getCells()
+    this.renderViews(cells, { ...options, queue: cells.map((cell) => cell.id) })
   }
 
   protected onCellAdded({ cell, options }: Model.EventArgs['cell:added']) {
     this.renderViews([cell], options)
   }
 
-  protected onCellRemoved({ cell, options }: Model.EventArgs['cell:removed']) {
-    const viewItem = this.views[cell.id]
-    if (viewItem) {
-      const view = viewItem.view
-      this.requestViewUpdate(view, Scheduler.FLAG_REMOVE, options)
-    }
+  protected onCellRemoved({ cell }: Model.EventArgs['cell:removed']) {
+    this.removeViews([cell])
   }
 
   protected onCellZIndexChanged({
@@ -108,7 +107,7 @@ export class Scheduler extends Disposable {
     viewItem.options = options
 
     const priorAction = view.hasAction(flag, ['translate', 'resize', 'rotate'])
-    if (view.isNodeView() && priorAction) {
+    if (priorAction || options.async === false) {
       priority = JOB_PRIORITY.PRIOR // eslint-disable-line
       flush = false // eslint-disable-line
     }
@@ -118,6 +117,16 @@ export class Scheduler extends Disposable {
       priority,
       cb: () => {
         this.renderViewInArea(view, flag, options)
+        const queue = options.queue
+        if (queue) {
+          const index = queue.indexOf(view.cell.id)
+          if (index >= 0) {
+            queue.splice(index, 1)
+          }
+          if (queue.length === 0) {
+            this.graph.trigger('render:done')
+          }
+        }
       },
     })
 
@@ -133,7 +142,7 @@ export class Scheduler extends Disposable {
 
   setRenderArea(area?: Rectangle) {
     this.renderArea = area
-    this.flushWaittingViews()
+    this.flushWaitingViews()
   }
 
   isViewMounted(view: CellView) {
@@ -181,13 +190,15 @@ export class Scheduler extends Disposable {
         }
       }
 
-      this.requestViewUpdate(
-        viewItem.view,
-        flag,
-        options,
-        cell.isNode() ? JOB_PRIORITY.RenderNode : JOB_PRIORITY.RenderEdge,
-        false,
-      )
+      if (viewItem) {
+        this.requestViewUpdate(
+          viewItem.view,
+          flag,
+          options,
+          this.getRenderPriority(viewItem.view),
+          false,
+        )
+      }
     })
 
     this.flush()
@@ -203,7 +214,7 @@ export class Scheduler extends Disposable {
     }
 
     let result = 0
-    if (this.isInRenderArea(view)) {
+    if (this.isUpdatable(view)) {
       result = this.updateView(view, flag, options)
       viewItem.flag = result
     } else {
@@ -211,13 +222,46 @@ export class Scheduler extends Disposable {
         result = this.updateView(view, flag, options)
         viewItem.flag = result
       } else {
-        viewItem.state = Scheduler.ViewState.WAITTING
+        viewItem.state = Scheduler.ViewState.WAITING
       }
     }
 
     if (result) {
-      console.log('left flag', result) // eslint-disable-line
+      if (
+        cell.isEdge() &&
+        (result & view.getFlag(['source', 'target'])) === 0
+      ) {
+        this.queue.queueJob({
+          id,
+          priority: JOB_PRIORITY.RenderEdge,
+          cb: () => {
+            this.updateView(view, flag, options)
+          },
+        })
+      }
     }
+  }
+
+  protected removeViews(cells: Cell[]) {
+    cells.forEach((cell) => {
+      const id = cell.id
+      const viewItem = this.views[id]
+
+      if (viewItem) {
+        this.willRemoveViews[id] = viewItem
+        delete this.views[id]
+
+        this.queue.queueJob({
+          id,
+          priority: this.getRenderPriority(viewItem.view),
+          cb: () => {
+            this.removeView(viewItem.view)
+          },
+        })
+      }
+    })
+
+    this.flush()
   }
 
   protected flush() {
@@ -226,18 +270,19 @@ export class Scheduler extends Disposable {
       : this.queue.queueFlushSync()
   }
 
-  protected flushWaittingViews() {
-    const ids = Object.keys(this.views)
-    for (let i = 0, len = ids.length; i < len; i += 1) {
-      const viewItem = this.views[ids[i]]
-      if (viewItem && viewItem.state === Scheduler.ViewState.WAITTING) {
+  protected flushWaitingViews() {
+    Object.values(this.views).forEach((viewItem) => {
+      if (viewItem && viewItem.state === Scheduler.ViewState.WAITING) {
         const { view, flag, options } = viewItem
-        const priority = view.cell.isNode()
-          ? JOB_PRIORITY.RenderNode
-          : JOB_PRIORITY.RenderEdge
-        this.requestViewUpdate(view, flag, options, priority, false)
+        this.requestViewUpdate(
+          view,
+          flag,
+          options,
+          this.getRenderPriority(view),
+          false,
+        )
       }
-    }
+    })
 
     this.flush()
   }
@@ -278,26 +323,29 @@ export class Scheduler extends Disposable {
       }
 
       viewItem.state = Scheduler.ViewState.MOUNTED
+      this.graph.trigger('view:mounted', { view })
     }
   }
 
-  protected removeViews() {
-    Object.keys(this.views).forEach((id) => {
-      const viewItem = this.views[id]
+  protected resetViews() {
+    this.willRemoveViews = { ...this.views, ...this.willRemoveViews }
+    Object.values(this.willRemoveViews).forEach((viewItem) => {
       if (viewItem) {
-        this.removeView(viewItem.view.cell)
+        this.removeView(viewItem.view)
       }
     })
     this.views = {}
+    this.willRemoveViews = {}
   }
 
-  protected removeView(cell: Cell) {
-    const viewItem = this.views[cell.id]
-    if (viewItem) {
+  protected removeView(view: CellView) {
+    const cell = view.cell
+    const viewItem = this.willRemoveViews[cell.id]
+    if (viewItem && view) {
       viewItem.view.remove()
-      delete this.views[cell.id]
+      delete this.willRemoveViews[cell.id]
+      this.graph.trigger('view:unmounted', { view })
     }
-    return viewItem.view
   }
 
   protected toggleVisible(cell: Cell, visible: boolean) {
@@ -364,8 +412,7 @@ export class Scheduler extends Disposable {
 
   protected removeZPivots() {
     if (this.zPivots) {
-      Object.keys(this.zPivots).forEach((z) => {
-        const elem = this.zPivots[z]
+      Object.values(this.zPivots).forEach((elem) => {
         if (elem && elem.parentNode) {
           elem.parentNode.removeChild(elem)
         }
@@ -377,13 +424,25 @@ export class Scheduler extends Disposable {
   protected createCellView(cell: Cell) {
     const options = { graph: this.graph }
 
+    const createViewHook = this.graph.options.createCellView
+    if (createViewHook) {
+      const ret = FunctionExt.call(createViewHook, this.graph, cell)
+      if (ret) {
+        return new ret(cell, options) // eslint-disable-line new-cap
+      }
+      if (ret === null) {
+        // null means not render
+        return null
+      }
+    }
+
     const view = cell.view
+
     if (view != null && typeof view === 'string') {
       const def = CellView.registry.get(view)
       if (def) {
         return new def(cell, options) // eslint-disable-line new-cap
       }
-
       return CellView.registry.onNotFound(view)
     }
 
@@ -406,10 +465,16 @@ export class Scheduler extends Disposable {
     for (let i = 0, n = edges.length; i < n; i += 1) {
       const edge = edges[i]
       const viewItem = this.views[edge.id]
+
       if (!viewItem) {
         continue
       }
+
       const edgeView = viewItem.view
+      if (!this.isViewMounted(edgeView)) {
+        continue
+      }
+
       const flagLabels: FlagManager.Action[] = ['update']
       if (edge.getTargetCell() === cell) {
         flagLabels.push('target')
@@ -427,16 +492,43 @@ export class Scheduler extends Disposable {
     return effectedEdges
   }
 
-  protected isInRenderArea(view: CellView) {
-    return (
-      !this.renderArea ||
-      this.renderArea.isIntersectWithRect(view.cell.getBBox())
-    )
+  protected isUpdatable(view: CellView) {
+    if (view.isNodeView()) {
+      if (this.renderArea) {
+        return this.renderArea.isIntersectWithRect(view.cell.getBBox())
+      }
+      return true
+    }
+
+    if (view.isEdgeView()) {
+      const edge = view.cell
+      const sourceCell = edge.getSourceCell()
+      const targetCell = edge.getTargetCell()
+      if (this.renderArea && sourceCell && targetCell) {
+        return (
+          this.renderArea.isIntersectWithRect(sourceCell.getBBox()) ||
+          this.renderArea.isIntersectWithRect(targetCell.getBBox())
+        )
+      }
+    }
+
+    return true
+  }
+
+  protected getRenderPriority(view: CellView) {
+    return view.cell.isNode()
+      ? JOB_PRIORITY.RenderNode
+      : JOB_PRIORITY.RenderEdge
   }
 
   @Disposable.dispose()
   dispose() {
     this.stopListening()
+    // clear views
+    Object.keys(this.views).forEach((id) => {
+      this.views[id].view.dispose()
+    })
+    this.views = {}
   }
 }
 export namespace Scheduler {
@@ -449,12 +541,18 @@ export namespace Scheduler {
   export enum ViewState {
     CREATED,
     MOUNTED,
-    WAITTING,
+    WAITING,
   }
   export interface View {
     view: CellView
     flag: number
     options: any
     state: ViewState
+  }
+
+  export interface EventArgs {
+    'view:mounted': { view: CellView }
+    'view:unmounted': { view: CellView }
+    'render:done': null
   }
 }

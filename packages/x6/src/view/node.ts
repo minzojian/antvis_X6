@@ -58,7 +58,7 @@ export class NodeView<
     return true
   }
 
-  confirmUpdate(flag: number) {
+  confirmUpdate(flag: number, options: any = {}) {
     let ret = flag
     if (this.hasAction(ret, 'ports')) {
       this.removePorts()
@@ -95,7 +95,13 @@ export class NodeView<
       ret = this.handleAction(ret, 'translate', () => this.translate())
       ret = this.handleAction(ret, 'rotate', () => this.rotate())
       ret = this.handleAction(ret, 'ports', () => this.renderPorts())
-      ret = this.handleAction(ret, 'tools', () => this.renderTools())
+      ret = this.handleAction(ret, 'tools', () => {
+        if (this.getFlag('tools') === flag) {
+          this.renderTools()
+        } else {
+          this.updateTools(options)
+        }
+      })
     }
 
     return ret
@@ -213,8 +219,7 @@ export class NodeView<
   }
 
   protected removePorts() {
-    Object.keys(this.portsCache).forEach((portId) => {
-      const cached = this.portsCache[portId]
+    Object.values(this.portsCache).forEach((cached) => {
       Dom.remove(cached.portElement)
     })
   }
@@ -357,7 +362,12 @@ export class NodeView<
 
   protected updatePorts() {
     const groups = this.cell.getParsedGroups()
-    Object.keys(groups).forEach((groupName) => this.updatePortGroup(groupName))
+    const groupList = Object.keys(groups)
+    if (groupList.length === 0) {
+      this.updatePortGroup()
+    } else {
+      groupList.forEach((groupName) => this.updatePortGroup(groupName))
+    }
   }
 
   protected updatePortGroup(groupName?: string) {
@@ -452,6 +462,28 @@ export class NodeView<
     return { e, x, y, view, node, cell } as NodeView.PositionEventArgs<E>
   }
 
+  protected getPortEventArgs<E>(
+    e: E,
+    port: string,
+    pos?: { x: number; y: number },
+  ): NodeView.PositionEventArgs<E> | NodeView.MouseEventArgs<E> {
+    const view = this // eslint-disable-line
+    const node = view.cell
+    const cell = node
+    if (pos) {
+      return {
+        e,
+        x: pos.x,
+        y: pos.y,
+        view,
+        node,
+        cell,
+        port,
+      } as NodeView.PositionEventArgs<E>
+    }
+    return { e, view, node, cell, port } as NodeView.MouseEventArgs<E>
+  }
+
   notifyMouseDown(e: Dom.MouseDownEvent, x: number, y: number) {
     super.onMouseDown(e, x, y)
     this.notify('node:mousedown', this.getEventArgs(e, x, y))
@@ -467,19 +499,40 @@ export class NodeView<
     this.notify('node:mouseup', this.getEventArgs(e, x, y))
   }
 
+  notifyPortEvent(
+    name: string,
+    e: Dom.EventObject,
+    pos?: { x: number; y: number },
+  ) {
+    const port = this.findAttr('port', e.target)
+    if (port) {
+      const originType = e.type
+      if (name === 'node:port:mouseenter') {
+        e.type = 'mouseenter'
+      } else if (name === 'node:port:mouseleave') {
+        e.type = 'mouseleave'
+      }
+      this.notify(name, this.getPortEventArgs(e, port, pos))
+      e.type = originType
+    }
+  }
+
   onClick(e: Dom.ClickEvent, x: number, y: number) {
     super.onClick(e, x, y)
     this.notify('node:click', this.getEventArgs(e, x, y))
+    this.notifyPortEvent('node:port:click', e, { x, y })
   }
 
   onDblClick(e: Dom.DoubleClickEvent, x: number, y: number) {
     super.onDblClick(e, x, y)
     this.notify('node:dblclick', this.getEventArgs(e, x, y))
+    this.notifyPortEvent('node:port:dblclick', e, { x, y })
   }
 
   onContextMenu(e: Dom.ContextMenuEvent, x: number, y: number) {
     super.onContextMenu(e, x, y)
     this.notify('node:contextmenu', this.getEventArgs(e, x, y))
+    this.notifyPortEvent('node:port:contextmenu', e, { x, y })
   }
 
   onMouseDown(e: Dom.MouseDownEvent, x: number, y: number) {
@@ -487,6 +540,7 @@ export class NodeView<
       return
     }
     this.notifyMouseDown(e, x, y)
+    this.notifyPortEvent('node:port:mousedown', e, { x, y })
     this.startNodeDragging(e, x, y)
   }
 
@@ -510,6 +564,7 @@ export class NodeView<
         })
       }
       this.notifyMouseMove(e, x, y)
+      this.notifyPortEvent('node:port:mousemove', e, { x, y })
     }
 
     this.setEventData<EventData.Mousemove>(e, data)
@@ -522,6 +577,7 @@ export class NodeView<
       this.stopMagnetDragging(e, x, y)
     } else {
       this.notifyMouseUp(e, x, y)
+      this.notifyPortEvent('node:port:mouseup', e, { x, y })
       if (action === 'move') {
         const meta = data as EventData.Moving
         const view = meta.targetView || this
@@ -540,11 +596,19 @@ export class NodeView<
   onMouseOver(e: Dom.MouseOverEvent) {
     super.onMouseOver(e)
     this.notify('node:mouseover', this.getEventArgs(e))
+    // mock mouseenter event,so we can get correct trigger time when move mouse from node to port
+    // wo also need to change e.type for use get correct event args
+    this.notifyPortEvent('node:port:mouseenter', e)
+    this.notifyPortEvent('node:port:mouseover', e)
   }
 
   onMouseOut(e: Dom.MouseOutEvent) {
     super.onMouseOut(e)
     this.notify('node:mouseout', this.getEventArgs(e))
+    // mock mouseleave event,so we can get correct trigger time when move mouse from port to node
+    // wo also need to change e.type for use get correct event args
+    this.notifyPortEvent('node:port:mouseleave', e)
+    this.notifyPortEvent('node:port:mouseout', e)
   }
 
   onMouseEnter(e: Dom.MouseEnterEvent) {
@@ -662,7 +726,9 @@ export class NodeView<
     if (options.frontOnly) {
       if (candidates.length > 0) {
         const zIndexMap = ArrayExt.groupBy(candidates, 'zIndex')
-        const maxZIndex = ArrayExt.max(Object.keys(zIndexMap))
+        const maxZIndex = ArrayExt.max(
+          Object.keys(zIndexMap).map((z) => parseInt(z, 10)),
+        )
         if (maxZIndex) {
           candidates = zIndexMap[maxZIndex]
         }
@@ -685,6 +751,7 @@ export class NodeView<
       } else {
         const view = candidate.findView(graph) as NodeView
         if (
+          validateEmbeding &&
           FunctionExt.call(validateEmbeding, graph, {
             child: this.cell,
             parent: view.cell,
@@ -827,12 +894,6 @@ export class NodeView<
       })
       this.stopPropagation(e)
     } else {
-      if (
-        Dom.hasClass(magnet, 'x6-port-body') ||
-        !!magnet.closest('.x6-port-body')
-      ) {
-        this.stopPropagation(e)
-      }
       this.onMouseDown(e, x, y)
     }
 
@@ -847,7 +908,6 @@ export class NodeView<
   ) {
     this.graph.model.startBatch('add-edge')
     const edgeView = this.createEdgeFromMagnet(magnet, x, y)
-    edgeView.notifyMouseDown(e, x, y) // backwards compatibility events
     edgeView.setEventData(
       e,
       edgeView.prepareArrowheadDragging('target', {
@@ -858,6 +918,7 @@ export class NodeView<
       }),
     )
     this.setEventData<Partial<EventData.Magnet>>(e, { edgeView })
+    edgeView.notifyMouseDown(e, x, y)
   }
 
   protected getDefaultEdge(sourceView: CellView, sourceMagnet: Element) {
@@ -1087,14 +1148,13 @@ export namespace NodeView {
   interface MagnetEventArgs {
     magnet: Element
   }
-
   export interface MouseEventArgs<E> {
     e: E
     node: Node
     cell: Node
     view: NodeView
+    port?: string
   }
-
   export interface PositionEventArgs<E>
     extends MouseEventArgs<E>,
       CellView.PositionEventArgs {}
@@ -1118,6 +1178,17 @@ export namespace NodeView {
     'node:mouseleave': MouseEventArgs<Dom.MouseLeaveEvent>
     'node:mousewheel': PositionEventArgs<Dom.EventObject> &
       CellView.MouseDeltaEventArgs
+
+    'node:port:click': PositionEventArgs<Dom.ClickEvent>
+    'node:port:dblclick': PositionEventArgs<Dom.DoubleClickEvent>
+    'node:port:contextmenu': PositionEventArgs<Dom.ContextMenuEvent>
+    'node:port:mousedown': PositionEventArgs<Dom.MouseDownEvent>
+    'node:port:mousemove': PositionEventArgs<Dom.MouseMoveEvent>
+    'node:port:mouseup': PositionEventArgs<Dom.MouseUpEvent>
+    'node:port:mouseover': MouseEventArgs<Dom.MouseOverEvent>
+    'node:port:mouseout': MouseEventArgs<Dom.MouseOutEvent>
+    'node:port:mouseenter': MouseEventArgs<Dom.MouseEnterEvent>
+    'node:port:mouseleave': MouseEventArgs<Dom.MouseLeaveEvent>
 
     'node:customevent': PositionEventArgs<Dom.MouseDownEvent> & {
       name: string

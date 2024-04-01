@@ -239,7 +239,7 @@ const graph = new Graph({
   container: document.getElementById('container')!,
 })
 
-fetch('../data/class.json')
+fetch('/data/class.json')
   .then((response) => response.json())
   .then((data) => {
     const cells: Cell[] = []

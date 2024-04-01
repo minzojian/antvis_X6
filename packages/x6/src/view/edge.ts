@@ -51,6 +51,9 @@ export class EdgeView<
   protected labelContainer: Element | null
   protected labelCache: { [index: number]: Element }
   protected labelSelectors: { [index: number]: Markup.Selectors }
+  protected labelDestroyFn: {
+    [index: number]: (args: GraphOptions.OnEdgeLabelRenderedArgs) => void
+  } = {}
 
   protected get [Symbol.toStringTag]() {
     return EdgeView.toStringTag
@@ -108,19 +111,6 @@ export class EdgeView<
       ref = this.removeAction(ref, 'target')
     }
 
-    const graph = this.graph
-    const sourceView = this.sourceView
-    const targetView = this.targetView
-
-    if (
-      graph &&
-      ((sourceView && !graph.renderer.isViewMounted(sourceView)) ||
-        (targetView && !graph.renderer.isViewMounted(targetView)))
-    ) {
-      // Wait for the sourceView and targetView to be rendered.
-      return ref
-    }
-
     if (this.hasAction(ref, 'render')) {
       this.render()
       ref = this.removeAction(ref, ['render', 'update', 'labels', 'tools'])
@@ -175,15 +165,40 @@ export class EdgeView<
         const selectors = this.labelSelectors[i]
         const onEdgeLabelRendered = this.graph.options.onEdgeLabelRendered
         if (onEdgeLabelRendered) {
-          onEdgeLabelRendered({
+          const fn = onEdgeLabelRendered({
             edge,
             label,
+            container,
+            selectors,
+          })
+          if (fn) {
+            this.labelDestroyFn[i] = fn
+          }
+        }
+      }
+    }
+  }
+
+  protected destroyCustomizeLabels() {
+    const labels = this.cell.labels
+
+    if (this.labelCache && this.labelSelectors && this.labelDestroyFn) {
+      for (let i = 0, n = labels.length; i < n; i += 1) {
+        const fn = this.labelDestroyFn[i]
+        const container = this.labelCache[i]
+        const selectors = this.labelSelectors[i]
+        if (fn && container && selectors) {
+          fn({
+            edge: this.cell,
+            label: labels[i],
             container,
             selectors,
           })
         }
       }
     }
+
+    this.labelDestroyFn = {}
   }
 
   protected renderLabels() {
@@ -254,6 +269,8 @@ export class EdgeView<
   }
 
   onLabelsChange(options: any = {}) {
+    this.destroyCustomizeLabels()
+
     if (this.shouldRerenderLabels(options)) {
       this.renderLabels()
     } else {
@@ -389,7 +406,7 @@ export class EdgeView<
     this.cleanCache()
     this.updateConnection(options)
 
-    const attrs = this.cell.getAttrs()
+    const { text, ...attrs } = this.cell.getAttrs()
     if (attrs != null) {
       this.updateAttrs(this.container, attrs, {
         selectors: this.selectors,
@@ -930,15 +947,18 @@ export class EdgeView<
 
     for (let i = 0, ii = labels.length; i < ii; i += 1) {
       const label = labels[i]
+      const labelNode = this.labelCache[i]
+
+      if (!labelNode) {
+        continue
+      }
+
       const labelPosition = this.normalizeLabelPosition(
         label.position as Edge.LabelPosition,
       )
       const pos = ObjectExt.merge({}, defaultPosition, labelPosition)
       const matrix = this.getLabelTransformationMatrix(pos)
-      this.labelCache[i].setAttribute(
-        'transform',
-        Dom.matrixToTransformString(matrix),
-      )
+      labelNode.setAttribute('transform', Dom.matrixToTransformString(matrix))
     }
 
     return this
@@ -1398,6 +1418,7 @@ export class EdgeView<
   }
 
   onMouseDown(e: Dom.MouseDownEvent, x: number, y: number) {
+    this.notifyMouseDown(e, x, y)
     this.startEdgeDragging(e, x, y)
   }
 
@@ -1977,19 +1998,21 @@ export class EdgeView<
     const graph = this.graph
     const { snap, allowEdge } = graph.options.connecting
     const radius = (typeof snap === 'object' && snap.radius) || 50
+    const anchor = (typeof snap === 'object' && snap.anchor) || 'center'
 
-    const findViewsOption = {
-      x: x - radius,
-      y: y - radius,
-      width: 2 * radius,
-      height: 2 * radius,
-    }
-
-    const views = graph.renderer.findViewsInArea(findViewsOption)
+    const views = graph.renderer.findViewsInArea(
+      {
+        x: x - radius,
+        y: y - radius,
+        width: 2 * radius,
+        height: 2 * radius,
+      },
+      { nodeOnly: true },
+    )
 
     if (allowEdge) {
       const edgeViews = graph.renderer
-        .findEdgeViewsInArea(findViewsOption)
+        .findEdgeViewsFromPoint({ x, y }, radius)
         .filter((view) => {
           return view !== this
         })
@@ -2002,15 +2025,26 @@ export class EdgeView<
     data.closestView = null
     data.closestMagnet = null
 
-    let distance
+    let distance: number
     let minDistance = Number.MAX_SAFE_INTEGER
     const pos = new Point(x, y)
 
     views.forEach((view) => {
       if (view.container.getAttribute('magnet') !== 'false') {
-        // Find distance from the center of the cell to pointer coordinates
-        distance = view.cell.getBBox().getCenter().distance(pos)
-        // the connection is looked up in a circle area by `distance < r`
+        if (view.isNodeView()) {
+          distance =
+            anchor === 'center'
+              ? view.cell.getBBox().getCenter().distance(pos)
+              : view.cell.getBBox().getNearestPointToPoint(pos).distance(pos)
+        } else if (view.isEdgeView()) {
+          const point = view.getClosestPoint(pos)
+          if (point) {
+            distance = point.distance(pos)
+          } else {
+            distance = Number.MAX_SAFE_INTEGER
+          }
+        }
+
         if (distance < radius && distance < minDistance) {
           if (
             prevMagnet === view.container ||
@@ -2191,7 +2225,9 @@ export class EdgeView<
     for (let i = 0, ii = cells.length; i < ii; i += 1) {
       const view = graph.findViewByCell(cells[i])
 
-      if (!view) {
+      // Prevent highlighting new edge
+      // Close https://github.com/antvis/X6/issues/2853
+      if (!view || view.cell.id === this.cell.id) {
         continue
       }
 
@@ -2345,7 +2381,6 @@ export class EdgeView<
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   stopLabelDragging(e: Dom.MouseUpEvent, x: number, y: number) {}
 
-  // #endregion
   // #endregion
 }
 

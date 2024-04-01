@@ -136,7 +136,7 @@ const graph = new Graph({
   },
 })
 
-fetch('../data/swimlane.json')
+fetch('/data/swimlane.json')
   .then((response) => response.json())
   .then((data) => {
     const cells: Cell[] = []

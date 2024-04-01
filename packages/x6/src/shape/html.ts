@@ -17,15 +17,17 @@ export namespace HTML {
   export class View extends NodeView<HTML> {
     protected init() {
       super.init()
-      this.cell.on('change:*', ({ key }) => {
-        const content = shapeMaps[this.cell.shape]
-        if (content) {
-          const { effect } = content
-          if (!effect || effect.includes(key)) {
-            this.renderHTMLComponent()
-          }
+      this.cell.on('change:*', this.onCellChangeAny, this)
+    }
+
+    protected onCellChangeAny({ key }: Cell.EventArgs['change:*']) {
+      const content = shapeMaps[this.cell.shape]
+      if (content) {
+        const { effect } = content
+        if (!effect || effect.includes(key)) {
+          this.renderHTMLComponent()
         }
-      })
+      }
     }
 
     confirmUpdate(flag: number) {
@@ -36,7 +38,8 @@ export namespace HTML {
     }
 
     protected renderHTMLComponent() {
-      const container = this.selectors.foContent as Element
+      const container =
+        this.selectors && (this.selectors.foContent as HTMLDivElement)
       if (container) {
         Dom.empty(container)
         const content = shapeMaps[this.cell.shape]
@@ -56,6 +59,11 @@ export namespace HTML {
           }
         }
       }
+    }
+
+    @View.dispose()
+    dispose() {
+      this.cell.off('change:*', this.onCellChangeAny, this)
     }
   }
 

@@ -8,7 +8,7 @@ const graph = new Graph({
   },
 })
 
-fetch('../data/algorithm-category.json')
+fetch('/data/algorithm-category.json')
   .then((response) => response.json())
   .then((data) => {
     const result = Hierarchy.mindmap(data, {

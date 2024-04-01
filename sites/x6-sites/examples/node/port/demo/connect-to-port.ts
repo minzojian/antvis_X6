@@ -45,7 +45,7 @@ graph.addEdge({
   source: { x: 40, y: 150 },
   target: {
     cell: rect,
-    port: 'port1', // 链接桩 ID
+    port: 'port1', // 连接桩 ID
   },
   attrs: {
     line: { stroke: '#d9d9d9' },
@@ -56,7 +56,7 @@ graph.addEdge({
   source: { x: 40, y: 150 },
   target: {
     cell: rect,
-    port: 'port2', // 链接桩 ID
+    port: 'port2', // 连接桩 ID
   },
   attrs: {
     line: { stroke: '#d9d9d9' },
@@ -67,7 +67,7 @@ graph.addEdge({
   source: { x: 40, y: 150 },
   target: {
     cell: rect,
-    port: 'port3', // 链接桩 ID
+    port: 'port3', // 连接桩 ID
   },
   attrs: {
     line: { stroke: '#d9d9d9' },

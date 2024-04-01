@@ -13,13 +13,14 @@ export default class Example extends React.Component {
       width: 800,
       height: 600,
       grid: true,
+      panning: {
+        enabled: true,
+        eventTypes: ['mouseWheelDown'],
+      },
     })
 
-    const keyboard = new Keyboard({
-      enabled: true,
-    })
+    const keyboard = new Keyboard()
     const selection = new Selection({
-      enabled: true,
       rubberband: true,
       multiple: true,
       strict: true,

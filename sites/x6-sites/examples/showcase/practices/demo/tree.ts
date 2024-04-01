@@ -138,11 +138,8 @@ Edge.registry.register('tree-edge', TreeEdge, true)
 // 初始化画布
 const graph = new Graph({
   container: document.getElementById('container')!,
-  async: true,
-  frozen: true,
-  scroller: true,
+  panning: true,
   interacting: false,
-  sorting: 'approx',
   connecting: {
     anchor: 'orth',
     connector: 'rounded',
@@ -174,10 +171,9 @@ graph.on('node:collapse', ({ node }: { node: TreeNode }) => {
   run(node)
 })
 
-fetch('../data/mindmap.json')
+fetch('/data/mindmap.json')
   .then((response) => response.json())
   .then((data) => {
-    const start = new Date().getTime()
     const nodes = data.nodes.map(({ leaf, ...metadata }: any) => {
       const node = new TreeNode(metadata)
       if (leaf) {
@@ -194,17 +190,5 @@ fetch('../data/mindmap.json')
     )
 
     graph.resetCells([...nodes, ...edges])
-
-    graph.unfreeze({
-      progress({ done }) {
-        if (done) {
-          const time = new Date().getTime() - start
-          console.log(time)
-          graph.unfreeze({
-            batchSize: 50,
-          })
-          graph.zoomToFit({ padding: 24 })
-        }
-      },
-    })
+    graph.zoomToFit({ padding: 24 })
   })

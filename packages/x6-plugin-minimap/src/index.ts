@@ -1,7 +1,8 @@
 import { FunctionExt, CssLoader, Dom, View, Graph, EventArgs } from '@antv/x6'
 import { content } from './style/raw'
 
-export class MiniMap extends View {
+export class MiniMap extends View implements Graph.Plugin {
+  public name = 'minimap'
   private graph: Graph
   public readonly options: MiniMap.Options
   public container: HTMLDivElement
@@ -14,7 +15,6 @@ export class MiniMap extends View {
   // Marks whether targetGraph is being transformed or scaled
   // If yes we update updateViewport only
   private targetGraphTransforming: boolean
-  public name = 'minimap'
 
   protected get scroller() {
     return this.graph.getPlugin<any>('scroller')
@@ -129,13 +129,12 @@ export class MiniMap extends View {
   }
 
   protected onRemove() {
-    this.targetGraph.view.remove()
     this.stopListening()
-    this.targetGraph.dispose()
+    this.targetGraph.dispose(false)
   }
 
   protected onTransform(options: { ui: boolean }) {
-    if (options.ui || this.targetGraphTransforming) {
+    if (options.ui || this.targetGraphTransforming || !this.scroller) {
       this.updateViewport()
     }
   }

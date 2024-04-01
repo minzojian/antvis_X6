@@ -37,7 +37,7 @@ export namespace Options {
       max?: number
     }
 
-    moveThreshold: 0
+    moveThreshold: number
     clickThreshold: number
     magnetThreshold: number | 'onleave'
     preventDefaultDblClick: boolean
@@ -54,7 +54,14 @@ export namespace Options {
     guard: (e: Dom.EventObject, view?: CellView | null) => boolean
 
     onPortRendered?: (args: OnPortRenderedArgs) => void
-    onEdgeLabelRendered?: (args: OnEdgeLabelRenderedArgs) => void
+    onEdgeLabelRendered?: (
+      args: OnEdgeLabelRenderedArgs,
+    ) => undefined | ((args: OnEdgeLabelRenderedArgs) => void)
+
+    createCellView?: (
+      this: Graph,
+      cell: Cell,
+    ) => typeof CellView | (new (...args: any[]) => CellView) | null | undefined
   }
 
   export interface ManualBooleans {
@@ -104,12 +111,12 @@ export namespace Options {
     /**
      * Snap edge to the closest node/port in the given radius on dragging.
      */
-    snap: boolean | { radius: number }
+    snap: boolean | { radius: number; anchor?: 'center' | 'bbox' }
 
     /**
      * Specify whether connect to point on the graph is allowed.
      */
-    allowBlank?:
+    allowBlank:
       | boolean
       | ((this: Graph, args: ValidateConnectionArgs) => boolean)
 
@@ -146,7 +153,7 @@ export namespace Options {
      * Specify whether more than one edge connected to the same source and
      * target node is allowed.
      */
-    allowMulti?:
+    allowMulti:
       | boolean
       | 'withPort'
       | ((this: Graph, args: ValidateConnectionArgs) => boolean)
@@ -173,6 +180,15 @@ export namespace Options {
     router: string | Router.NativeItem | Router.ManaualItem
     connector: string | Connector.NativeItem | Connector.ManaualItem
 
+    createEdge?: (
+      this: Graph,
+      args: {
+        sourceCell: Cell
+        sourceView: CellView
+        sourceMagnet: Element
+      },
+    ) => Nilable<Edge> | void
+
     /**
      * Check whether to add a new edge to the graph when user clicks
      * on an a magnet.
@@ -186,15 +202,6 @@ export namespace Options {
         e: Dom.MouseDownEvent | Dom.MouseEnterEvent
       },
     ) => boolean
-
-    createEdge?: (
-      this: Graph,
-      args: {
-        sourceCell: Cell
-        sourceView: CellView
-        sourceMagnet: Element
-      },
-    ) => Nilable<Edge> | void
 
     /**
      * Custom validation on stop draggin the edge arrowhead(source/target).
@@ -438,6 +445,8 @@ export namespace Options {
       allowNode: true,
       allowEdge: false,
       allowPort: true,
+      allowBlank: true,
+      allowMulti: true,
       highlight: false,
 
       anchor: 'center',
